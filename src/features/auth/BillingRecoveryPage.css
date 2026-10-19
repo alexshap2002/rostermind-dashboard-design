@@ -1,0 +1,11 @@
+.billing-recovery-card { width: min(620px, calc(100vw - 32px)); }
+.billing-recovery-list { display: grid; gap: 10px; margin-top: 18px; }
+.billing-recovery-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.billing-recovery-row > div { display: grid; gap: 3px; min-width: 0; }
+.billing-recovery-row b { overflow-wrap: anywhere; }
+.billing-recovery-row span { color: var(--text-3); font-size: 12px; font-weight: 650; }
+
+@media (max-width: 560px) {
+  .billing-recovery-row { align-items: stretch; flex-direction: column; }
+  .billing-recovery-row .btn { width: 100%; justify-content: center; }
+}
