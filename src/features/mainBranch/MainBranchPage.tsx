@@ -1,17 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { EmptyState, PageShell } from "../../components/admin/primitives";
+import { Navigate } from "react-router-dom";
+import { AccessProblem, EmptyState } from "../../components/admin/primitives";
+import { TopNav } from "../../components/layout/TopNav";
+import { dashboardQueries } from "../dashboard/api";
 import { enterBranch, rememberNetworkUrl } from "../branches/api";
 import { ApiError, apiDownload } from "../../lib/api";
 import {
   formatCurrency, formatDayMonth, formatNumber, formatPercent, formatRangeShort, formatUpdatedAt, pluralUk,
 } from "../../lib/format";
-import { IconDownload } from "../../lib/icons";
+import { IconActivity, IconCheckSquare, IconMoney, IconStudents } from "../../lib/icons";
 import { DEMO } from "../../demo/mockApi";
-import { mainBranchExportUrl, mainBranchQueries, UNMARKED_LESSON, type MainBranchFilters, type MainBranchKpi } from "./api";
+import {
+  ANOMALY_LABELS, SEVERITY, UNMARKED_LESSON, mainBranchExportUrl, mainBranchQueries,
+  type AttentionItem, type BranchRow, type MainBranchFilters, type MainBranchKpi,
+} from "./api";
 import { BranchCompare } from "./BranchCompare";
-import { Delta, PANEL_KINDS, type Panel, type PanelKind } from "./metrics";
+import { Delta, PANEL_KINDS, branchSignals, countLessons, type Panel, type PanelKind } from "./metrics";
 import { MetricPanel } from "./MetricPanel";
+import { NeonNav, type PresetItem, type Section } from "./NeonNav";
 import { NowStrip } from "./NowStrip";
 import { ReportTabs, TABS, type Tab } from "./ReportTabs";
 import { TrendPanel, type TrendPoint } from "./TrendPanel";
@@ -35,6 +42,7 @@ const utc = (value: string) => new Date(`${value.slice(0, 10)}T12:00:00Z`);
 const WEEKDAY = new Intl.DateTimeFormat("uk-UA", { weekday: "short", timeZone: "UTC" });
 const MONTH = new Intl.DateTimeFormat("uk-UA", { month: "long", year: "numeric", timeZone: "UTC" });
 const DAY_MONTH = new Intl.DateTimeFormat("uk-UA", { day: "numeric", month: "long", timeZone: "UTC" });
+const MONTH_ONLY = new Intl.DateTimeFormat("uk-UA", { month: "long", timeZone: "UTC" });
 /** «Порівнюємо з серпнем» — орудний відмінок місяця. */
 const MONTH_WITH = ["січнем", "лютим", "березнем", "квітнем", "травнем", "червнем", "липнем", "серпнем", "вереснем", "жовтнем", "листопадом", "груднем"];
 /** «Зараз» — відкриті справи за останні 30 днів, незалежно від обраного періоду. */
@@ -147,6 +155,31 @@ function spaActionUrl(url: string | null): string {
   return query ? `${target}?${query}` : target;
 }
 
+const SECTION_IDS: Record<Section, string> = { top: "nd-top", branches: "nd-branches", reports: "nd-reports" };
+
+/** Прокрутити до розділу; липка шапка врахована через scroll-margin-top у стилях. */
+function scrollToSection(section: Section) {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.getElementById(SECTION_IDS[section])?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+}
+
+/** Каркас сторінки: шапка + широкий контент без стандартного заголовка — заголовок малює сама консоль.
+    Логіка 401/403 — як у PageShell. */
+function NeonShell({ children }: { children: ReactNode }) {
+  const summary = useQuery(dashboardQueries.summary());
+  const s = summary.data;
+  const counts = s
+    ? { students: s.stats.students, teachers: s.stats.teachers, clubs: s.stats.clubs, active_schedules: s.stats.active_schedules }
+    : {};
+  if (summary.error instanceof ApiError && summary.error.status === 401) return <Navigate to="/login" replace />;
+  if (summary.error instanceof ApiError && summary.error.status === 403) return <AccessProblem error={summary.error} />;
+  return (
+    <>
+      <TopNav counts={counts} user={s?.user} tenantName={s?.tenant.name} />
+      <div className="content wide">{children}</div>
+    </>
+  );
+}
 
 export function MainBranchPage() {
   const qc = useQueryClient();
@@ -154,17 +187,23 @@ export function MainBranchPage() {
   const network = useQuery(mainBranchQueries.context());
   const [filters, setFilters] = useState<MainBranchFilters>(initial.filters);
   const [tab, setTab] = useState<Tab>(initial.tab ?? "lessons");
+  const [reportsOpen, setReportsOpen] = useState(initial.tab !== null);
+  const [section, setSection] = useState<Section>("top");
   const [panel, setPanelState] = useState<Panel | null>(initial.panel);
   const [problemFilter, setProblemFilter] = useState<{ severity?: string; type?: string; cursor: number }>({ cursor: 0 });
   const [trendMode, setTrendMode] = useState<"daily" | "weekly" | null>(null);
   const [customOpen, setCustomOpen] = useState(false);
-  const [branchMenu, setBranchMenu] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const branchMenuRef = useRef<HTMLDivElement>(null);
   const preset: Preset = customOpen ? "custom" : presetOf(filters);
   const setPanel = useCallback((next: Panel | null) => setPanelState(next), []);
+
+  // Темна тема «Неон» — лише на цій сторінці: клас на body перевизначає токени для всього, що тут рендериться.
+  useEffect(() => {
+    document.body.classList.add("theme-neon");
+    return () => document.body.classList.remove("theme-neon");
+  }, []);
 
   // Стан сторінки (період, філії, вкладка, відкрита панель) живе в адресі: «Назад до мережі» повертає сюди ж.
   useEffect(() => {
@@ -183,13 +222,6 @@ export function MainBranchPage() {
     rememberNetworkUrl(url);
   }, [filters.branchIds, filters.dateFrom, filters.dateTo, tab, panel]);
 
-  useEffect(() => {
-    if (!branchMenu) return;
-    const close = (e: MouseEvent) => { if (!branchMenuRef.current?.contains(e.target as Node)) setBranchMenu(false); };
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, [branchMenu]);
-
   const datasets = useMemo(() => new Set(network.data?.capabilities.datasets ?? []), [network.data]);
   const enabled = (dataset: string) => Boolean(network.data && datasets.has(dataset));
   const visibleTabs = useMemo(() => TABS.filter((t) => datasets.has(t.dataset)), [datasets]);
@@ -197,8 +229,11 @@ export function MainBranchPage() {
   const today = iso(kyivToday());
   const todayFilters: MainBranchFilters = { dateFrom: today, dateTo: today, branchIds: [], refresh: filters.refresh };
   const nowFilters: MainBranchFilters = { dateFrom: iso(addDays(kyivToday(), -(NOW_DAYS - 1))), dateTo: today, branchIds: [], refresh: filters.refresh };
+  const allFilters: MainBranchFilters = { ...filters, branchIds: [] };
 
   const kpi = useQuery({ ...mainBranchQueries.kpi(filters), enabled: enabled("kpi") });
+  // Той самий період без фільтра філій — для лічильників у навігації (при порожньому фільтрі це той самий кеш).
+  const kpiAll = useQuery({ ...mainBranchQueries.kpi(allFilters), enabled: enabled("kpi") });
   const trends = useQuery({ ...mainBranchQueries.trends(filters), enabled: enabled("trends") });
   const periodAttention = useQuery({ ...mainBranchQueries.attention(filters), enabled: enabled("attention") });
   const attention = useQuery({ ...mainBranchQueries.attention(nowFilters), enabled: enabled("attention") });
@@ -276,11 +311,23 @@ export function MainBranchPage() {
     }
   }
 
+  /** Перехід до розділу з навігації; «Проблеми» ще й розгортає звіти на потрібній вкладці. */
+  function jump(target: Section, tabKey?: "problems") {
+    setSection(target);
+    if (target === "reports") {
+      setReportsOpen(true);
+      if (tabKey) setTab(tabKey);
+    }
+    // Розгортка може ще не відрендеритись — прокручуємо після кадру.
+    window.requestAnimationFrame(() => scrollToSection(target));
+  }
+
   if (network.error instanceof ApiError) {
     return (
-      <PageShell title="Мережа шкіл">
+      <NeonShell>
+        <div className="nd-neon-solo"><h2>Мережа шкіл</h2></div>
         <EmptyState title="Немає доступу до мережі">{network.error.message}</EmptyState>
-      </PageShell>
+      </NeonShell>
     );
   }
 
@@ -293,174 +340,181 @@ export function MainBranchPage() {
   const attDelta = k?.comparison.attendance_rate_pct?.delta_percentage_points;
   const payDelta = k?.comparison.payroll_total_uah?.delta_percent;
   const failed = [kpi, trends, attention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
-  const attentionByTenant = periodAttention.data?.totals.by_tenant ?? {};
+  const periodItems = periodAttention.data?.items ?? [];
   const open = (kind: PanelKind) => () => setPanel({ kind, branch: null, scope: "period" });
+  // Підписи пресетів у навігації — коротко: «20 жовтня», «19–20 жовтня», «вересень» (рік — лише якщо інший).
+  const presets: PresetItem[] = PRESETS.map((p) => {
+    const r = presetRange(p.key);
+    const from = utc(r.dateFrom);
+    const range = p.key === "today" ? DAY_MONTH.format(from)
+      : p.key === "prev" ? `${MONTH_ONLY.format(from)}${from.getUTCFullYear() !== kyivToday().getUTCFullYear() ? ` ${from.getUTCFullYear()}` : ""}`
+      : humanRange(r.dateFrom, r.dateTo);
+    return { key: p.key, label: p.label, range };
+  });
 
   return (
-    <PageShell
-      title="Мережа шкіл"
-      subtitle={network.data
-        ? [`${formatNumber(activeBranches.length)} ${pluralUk(activeBranches.length, "активна філія", "активні філії", "активних філій")}`,
-           pendingCount ? `${pendingCount} ${pluralUk(pendingCount, "чекає", "чекають", "чекають")} оплати` : null,
-           k ? formatUpdatedAt(k.generated_at) : null].filter(Boolean).join(" · ")
-        : "Завантаження…"}
-    >
-      <div className="nd-page">
-        {DEMO && <div className="nd-demo" role="note"><b>Демо-версія</b> · дані вигадані, лише для обговорення дизайну. Зміни й переходи у філії вимкнено.</div>}
+    <NeonShell>
+      <div className="nd-neon">
+        <NeonNav
+          section={section}
+          onJump={jump}
+          onPanel={(kind) => setPanel({ kind, branch: null, scope: "period" })}
+          presets={presets}
+          preset={preset}
+          onPreset={(key) => { setCustomOpen(false); setRange(presetRange(key as Exclude<Preset, "custom">)); }}
+          onCustom={() => setCustomOpen(true)}
+          filters={filters}
+          onRange={setRange}
+          branches={activeBranches}
+          rowsAll={kpiAll.data?.branch_rows ?? []}
+          onToggleBranch={toggleBranch}
+          onAllBranches={() => setFilters((f) => ({ ...f, refresh: false, branchIds: [] }))}
+          onRefresh={onRefresh}
+          canExport={Boolean(network.data?.capabilities.can_export_full_report)}
+          exporting={downloading}
+          onExport={downloadReport}
+        />
 
-        {/* ── А. Контекст: один період, один фільтр філій, вторинний експорт ── */}
-        <div className="nd-toolbar" role="group" aria-label="Період і філії">
-          <div className="nd-seg" role="radiogroup" aria-label="Період">
-            {PRESETS.map((p) => (
-              <button key={p.key} type="button" role="radio" aria-checked={preset === p.key} className={preset === p.key ? "on" : ""}
-                onClick={() => { setCustomOpen(false); setRange(presetRange(p.key)); }}>{p.label}</button>
-            ))}
-            <button type="button" role="radio" aria-checked={preset === "custom"} className={preset === "custom" ? "on" : ""} onClick={() => setCustomOpen(true)}>Свій період</button>
-          </div>
-          {preset === "custom" && (
-            <div className="nd-dates">
-              <label><span>Від</span><input type="date" value={filters.dateFrom} max={filters.dateTo} onChange={(e) => e.target.value && setRange({ dateFrom: e.target.value, dateTo: filters.dateTo })} /></label>
-              <label><span>До</span><input type="date" value={filters.dateTo} min={filters.dateFrom} onChange={(e) => e.target.value && setRange({ dateFrom: filters.dateFrom, dateTo: e.target.value })} /></label>
+        <main className="nd-main" id="nd-top">
+          {DEMO && <div className="nd-demo" role="note"><b>Демо-версія</b> · дані вигадані, лише для обговорення дизайну. Зміни й переходи у філії вимкнено.</div>}
+
+          {/* ── А. Контекст ── */}
+          <header className="nd-head">
+            <div className="nd-head-text">
+              <h2>Мережа шкіл</h2>
+              <p className="nd-sub">
+                {periodLabel} · {branchesLabel}
+                {pendingCount > 0 && <> · {pendingCount} {pluralUk(pendingCount, "філія чекає", "філії чекають", "філій чекають")} оплати</>}
+                {k && <> · {formatUpdatedAt(k.generated_at)}</>}
+              </p>
+              {k && <p className="nd-compare">{compareText(k.comparison, filters)}</p>}
+            </div>
+            <div className="nd-jump" role="group" aria-label="Перейти до розділу">
+              <button type="button" className={section === "top" ? "on" : ""} onClick={() => jump("top")}>Огляд</button>
+              <button type="button" className={section === "branches" ? "on" : ""} onClick={() => jump("branches")}>Філії</button>
+              <button type="button" className={section === "reports" ? "on" : ""} onClick={() => jump("reports")}>Звіти</button>
+            </div>
+          </header>
+
+          {notice && <div className="nd-notice" role="status">{notice}<button type="button" className="nd-icon-btn" aria-label="Закрити" onClick={() => setNotice(null)}>✕</button></div>}
+          {failed && (
+            <div className="form-error" role="alert">
+              Частину даних не завантажено: {failed.message}{" "}
+              <button type="button" className="btn ghost sm" onClick={onRefresh}>Спробувати ще</button>
             </div>
           )}
-          {activeBranches.length > 1 && (
-            <div className="nd-dd" ref={branchMenuRef}>
-              <button type="button" className="nd-dd-btn" aria-haspopup="true" aria-expanded={branchMenu} onClick={() => setBranchMenu((v) => !v)}>
-                {branchesLabel} <span aria-hidden="true">▾</span>
-              </button>
-              {branchMenu && (
-                <div className="nd-dd-menu">
-                  <label className="nd-check"><input type="checkbox" checked={filters.branchIds.length === 0} onChange={() => setFilters((f) => ({ ...f, refresh: false, branchIds: [] }))} /> Усі філії</label>
-                  {activeBranches.map((b) => (
-                    <label key={b.tenant_id} className="nd-check">
-                      <input type="checkbox" checked={filters.branchIds.includes(b.tenant_id)} onChange={() => toggleBranch(b.tenant_id)} /> {b.tenant_name}
-                    </label>
-                  ))}
+
+          {/* ── В. Основні показники за період ── */}
+          <div className="nd-kpis">
+            <Kpi tone="teal" icon={<IconStudents />} label="Діти в базі" loading={!k} onOpen={open("students")}
+              value={k ? formatNumber(k.students_total) : ""}
+              sub="поточна база на кінець періоду"
+              extra={k && (
+                <button type="button" className="nd-kpi-chip" onClick={open("new")}>
+                  {k.students_new > 0 ? `+${formatNumber(k.students_new)} нових за період →` : "нових за період немає"}
+                </button>
+              )} />
+            <Kpi tone="violet" icon={<IconCheckSquare />} label="Проведено занять" loading={!k} onOpen={open("lessons")}
+              value={k ? <>{formatNumber(k.lessons_completed)}<small> з {formatNumber(k.lessons_scheduled)}</small></> : ""}
+              sub="навчальні заняття з відміткою"
+              extra={k && (
+                <>
+                  {k.lessons_unmarked_overdue > 0
+                    ? <button type="button" className="nd-kpi-chip" onClick={() => setPanel({ kind: "unmarked", branch: null, scope: "period" })}>{formatNumber(k.lessons_unmarked_overdue)} не відмічено →</button>
+                    : <span className="nd-kpi-chip static">усі відмічено</span>}
+                  {k.lessons_upcoming > 0 && <span className="nd-kpi-chip static">{formatNumber(k.lessons_upcoming)} попереду</span>}
+                </>
+              )} />
+            <Kpi tone="orange" icon={<IconActivity />} label="Відвідуваність" loading={!k} onOpen={open("attendance")}
+              value={k ? (k.attendance_has_data ? formatPercent(k.attendance_rate_pct) : "—") : ""}
+              sub={k ? (!k.attendance_has_data ? "занять з дітьми не було" : "присутні з очікуваних дітей") : null}
+              delta={k && k.attendance_has_data ? (noCompare ? <small>порівняємо завтра — день ще триває</small>
+                : attDelta === null || attDelta === undefined ? <small>немає з чим порівняти</small>
+                : <><Delta value={attDelta} unit="pp" /><small>до попереднього періоду</small></>) : null} />
+            <Kpi tone="pink" icon={<IconMoney />} label="Нараховано зарплат" loading={!k} onOpen={open("payroll")}
+              value={k ? `${formatCurrency(k.payroll_total_uah)} ₴` : ""}
+              sub="нарахування за заняття й бонуси"
+              delta={k ? (noCompare ? <small>порівняємо завтра — день ще триває</small>
+                : payDelta === null || payDelta === undefined ? <small>немає з чим порівняти</small>
+                : <><Delta value={payDelta} unit="pct" tone="neutral" /><small>до попереднього періоду</small></>) : null} />
+          </div>
+          {k && (
+            <p className="nd-aux">
+              {formatNumber(k.branches_total)} {pluralUk(k.branches_total, "активна філія", "активні філії", "активних філій")}
+              {" · "}{formatNumber(k.teachers_total)} {pluralUk(k.teachers_total, "працівник", "працівники", "працівників")}
+              {k.lessons_cancelled > 0 && <> · {formatNumber(k.lessons_cancelled)} {pluralUk(k.lessons_cancelled, "заняття скасовано", "заняття скасовано", "занять скасовано")}</>}
+            </p>
+          )}
+
+          {/* ── Б. На зараз · стан філій · сигнали за період ── */}
+          <div className="nd-trio">
+            <NowStrip
+              today={todayKpi.data}
+              unmarked={unmarked.data}
+              attention={attention.data}
+              days={NOW_DAYS}
+              loading={todayKpi.isLoading || unmarked.isLoading || attention.isLoading}
+              onOpen={setPanel}
+            />
+            <BranchStatus rows={k?.branch_rows ?? []} attention={periodItems} loading={kpi.isLoading} onOpen={setPanel} />
+            <PeriodSignals items={periodItems} loading={periodAttention.isLoading} onOpen={setPanel} />
+          </div>
+
+          {/* ── Г. Філії ── */}
+          <section className="nd-card nd-branches" id="nd-branches" aria-labelledby="nd-branches-h">
+            <header className="nd-card-head">
+              <h3 id="nd-branches-h">Філії</h3>
+              <span className="nd-meta">назва — огляд філії тут · число — розбивка показника · «Працювати у філії» — перейти в її роботу</span>
+            </header>
+            <BranchCompare
+              rows={k?.branch_rows ?? []}
+              attention={periodItems}
+              loading={kpi.isLoading}
+              canEnter={canEnter}
+              busyId={busyId}
+              onOpen={setPanel}
+              onEnter={(r) => goToBranch(r.tenant_id, r.tenant_name, "/")}
+            />
+            {pendingCount > 0 && (
+              <p className="nd-aux in-card">{pendingCount} {pluralUk(pendingCount, "філія чекає", "філії чекають", "філій чекають")} оплати RosterMind — <a className="link" href="/branches">Філії й оплата</a></p>
+            )}
+          </section>
+
+          {/* ── Д. Динаміка ── */}
+          <section className="nd-card nd-trend" aria-labelledby="nd-trend-h">
+            <header className="nd-card-head">
+              <div>
+                <h3 id="nd-trend-h">Динаміка за період</h3>
+                <span className="nd-meta">{span < 7 ? "для динаміки оберіть щонайменше тиждень" : mode === "daily" ? "по днях" : "по тижнях"}</span>
+              </div>
+              {span >= 7 && (
+                <div className="nd-seg" role="radiogroup" aria-label="Крок графіка">
+                  <button type="button" role="radio" aria-checked={mode === "daily"} className={mode === "daily" ? "on" : ""} onClick={() => setTrendMode("daily")}>По днях</button>
+                  <button type="button" role="radio" aria-checked={mode === "weekly"} className={mode === "weekly" ? "on" : ""} onClick={() => setTrendMode("weekly")}>По тижнях</button>
                 </div>
               )}
-            </div>
-          )}
-          <span className="nd-spacer" />
-          <button type="button" className="btn ghost sm" onClick={onRefresh}>Оновити</button>
-          {network.data?.capabilities.can_export_full_report && (
-            <button type="button" className="btn ghost sm keep-label" disabled={downloading} onClick={downloadReport}>
-              <IconDownload /><span>{downloading ? "Готуємо…" : "Excel"}</span>
-            </button>
-          )}
-        </div>
+            </header>
+            {span >= 7 && <TrendPanel points={points} loading={trends.isLoading} />}
+          </section>
 
-        {notice && <div className="nd-notice" role="status">{notice}<button type="button" className="nd-icon-btn" aria-label="Закрити" onClick={() => setNotice(null)}>✕</button></div>}
-        {failed && (
-          <div className="form-error" role="alert">
-            Частину даних не завантажено: {failed.message}{" "}
-            <button type="button" className="btn ghost sm" onClick={onRefresh}>Спробувати ще</button>
-          </div>
-        )}
-
-        {/* ── Б. На зараз ── */}
-        <NowStrip
-          today={todayKpi.data}
-          unmarked={unmarked.data}
-          attention={attention.data}
-          days={NOW_DAYS}
-          loading={todayKpi.isLoading || unmarked.isLoading || attention.isLoading}
-          onOpen={setPanel}
-        />
-
-        {/* ── В. Основні показники за період ── */}
-        <div className="nd-section-head">
-          <h3>{periodLabel} · {branchesLabel}</h3>
-          {k && <span className="nd-compare" title="Як рахуємо зміну">{compareText(k.comparison, filters)}</span>}
-        </div>
-        <div className="nd-kpis">
-          <Kpi label="Діти в базі" loading={!k} onOpen={open("students")}
-            value={k ? formatNumber(k.students_total) : ""}
-            extra={k && (
-              <button type="button" className="nd-kpi-chip" onClick={open("new")}>
-                {k.students_new > 0 ? `+${formatNumber(k.students_new)} нових за період` : "нових за період немає"}
-              </button>
-            )}
-            sub="поточна база на кінець періоду" />
-          <Kpi label="Проведено занять" loading={!k} onOpen={open("lessons")}
-            value={k ? <>{formatNumber(k.lessons_completed)}<small> з {formatNumber(k.lessons_scheduled)}</small></> : ""}
-            extra={k && (
-              <span className="nd-kpi-status">
-                {k.lessons_unmarked_overdue > 0
-                  ? <button type="button" className="nd-pill warn" onClick={() => setPanel({ kind: "unmarked", branch: null, scope: "period" })}>{formatNumber(k.lessons_unmarked_overdue)} не відмічено</button>
-                  : <span className="nd-pill ok">усі відмічено</span>}
-                {k.lessons_upcoming > 0 && <span className="nd-pill">{formatNumber(k.lessons_upcoming)} попереду</span>}
-              </span>
-            )}
-            sub="навчальні заняття з відміткою" />
-          <Kpi label="Відвідуваність" loading={!k} onOpen={open("attendance")}
-            value={k ? (k.attendance_has_data ? formatPercent(k.attendance_rate_pct) : "—") : ""}
-            sub={k ? (!k.attendance_has_data ? "занять з дітьми не було" : noCompare ? "порівняємо завтра — день ще триває"
-              : attDelta === null || attDelta === undefined ? "немає з чим порівняти" : <><Delta value={attDelta} unit="pp" /> до попереднього періоду</>) : null} />
-          <Kpi label="Нараховано зарплат" loading={!k} onOpen={open("payroll")}
-            value={k ? `${formatCurrency(k.payroll_total_uah)} ₴` : ""}
-            sub={k ? (noCompare ? "порівняємо завтра — день ще триває"
-              : payDelta === null || payDelta === undefined ? "немає з чим порівняти" : <><Delta value={payDelta} unit="pct" tone="neutral" /> до попереднього періоду</>) : null} />
-        </div>
-        {k && (
-          <p className="nd-aux">
-            {formatNumber(k.branches_total)} {pluralUk(k.branches_total, "активна філія", "активні філії", "активних філій")}
-            {" · "}{formatNumber(k.teachers_total)} {pluralUk(k.teachers_total, "працівник", "працівники", "працівників")}
-            {k.lessons_cancelled > 0 && <> · {formatNumber(k.lessons_cancelled)} {pluralUk(k.lessons_cancelled, "заняття скасовано", "заняття скасовано", "занять скасовано")}</>}
-          </p>
-        )}
-
-        {/* ── Г. Філії ── */}
-        <div className="nd-section-head">
-          <h3>Філії</h3>
-          <span className="nd-hint">Назва — огляд філії тут; «Працювати у філії» — перейти в її роботу; число — розбивка цього показника</span>
-        </div>
-        <BranchCompare
-          rows={k?.branch_rows ?? []}
-          attentionByTenant={attentionByTenant}
-          loading={kpi.isLoading}
-          canEnter={canEnter}
-          busyId={busyId}
-          onOpen={setPanel}
-          onEnter={(r) => goToBranch(r.tenant_id, r.tenant_name, "/")}
-        />
-        {pendingCount > 0 && (
-          <p className="nd-aux">{pendingCount} {pluralUk(pendingCount, "філія чекає", "філії чекають", "філій чекають")} оплати RosterMind — <a className="link" href="/branches">Філії й підписка</a></p>
-        )}
-
-        {/* ── Д. Динаміка ── */}
-        <section className="nd-card nd-trend">
-          <div className="nd-card-head">
-            <div>
-              <h3>Динаміка за період</h3>
-              <p>{span < 7 ? "Для динаміки оберіть щонайменше тиждень" : mode === "daily" ? "по днях" : "по тижнях"}</p>
-            </div>
-            {span >= 7 && (
-              <div className="nd-seg sm" role="radiogroup" aria-label="Крок графіка">
-                <button type="button" role="radio" aria-checked={mode === "daily"} className={mode === "daily" ? "on" : ""} onClick={() => setTrendMode("daily")}>По днях</button>
-                <button type="button" role="radio" aria-checked={mode === "weekly"} className={mode === "weekly" ? "on" : ""} onClick={() => setTrendMode("weekly")}>По тижнях</button>
-              </div>
-            )}
-          </div>
-          {span >= 7 && <TrendPanel points={points} loading={trends.isLoading} />}
-        </section>
-
-        {/* ── Детальні звіти ── */}
-        <details className="nd-details" open={initial.tab !== null}>
-          <summary><h3>Детальні звіти</h3><span>заняття, гуртки, відвідуваність, зарплати, сигнали — за обраний період</span></summary>
-          <ReportTabs
-            tab={tab}
-            tabs={visibleTabs}
-            onTab={setTab}
-            filters={filters}
-            tenant={null}
-            onClearTenant={() => undefined}
-            problemFilter={problemFilter}
-            onProblemFilter={setProblemFilter}
-            canEnter={canEnter}
-            busyId={busyId}
-            onAction={(row) => goToBranch(row.tenant_id, row.tenant_name, spaActionUrl(row.action_url), "Відкрити")}
-          />
-        </details>
+          {/* ── Детальні звіти ── */}
+          <details className="nd-details" id="nd-reports" open={reportsOpen} onToggle={(e) => setReportsOpen(e.currentTarget.open)}>
+            <summary><h3>Детальні звіти</h3><span>заняття, гуртки, відвідуваність, зарплати, проблеми — за обраний період</span></summary>
+            <ReportTabs
+              tab={tab}
+              tabs={visibleTabs}
+              onTab={setTab}
+              filters={filters}
+              tenant={null}
+              onClearTenant={() => undefined}
+              problemFilter={problemFilter}
+              onProblemFilter={setProblemFilter}
+              canEnter={canEnter}
+              busyId={busyId}
+              onAction={(row) => goToBranch(row.tenant_id, row.tenant_name, spaActionUrl(row.action_url), "Відкрити")}
+            />
+          </details>
+        </main>
       </div>
 
       {panel && (
@@ -479,25 +533,124 @@ export function MainBranchPage() {
           onWork={goToBranch}
         />
       )}
-    </PageShell>
+    </NeonShell>
   );
 }
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+const lower = (s: string) => s[0].toLowerCase() + s.slice(1);
 
-/** Клікабельний показник: уся картка — кнопка з видимим «Переглянути»; додаткові дії — окремими кнопками поруч. */
-function Kpi({ label, value, sub, extra, loading, onOpen }: {
-  label: string; value: ReactNode; sub?: ReactNode; extra?: ReactNode; loading: boolean; onOpen: () => void;
+/** Градієнтна картка показника: уся картка — кнопка з видимим «Переглянути»; чипи — окремими кнопками поруч. */
+function Kpi({ tone, icon, label, value, sub, delta, extra, loading, onOpen }: {
+  tone: "teal" | "violet" | "orange" | "pink"; icon: ReactNode; label: string; value: ReactNode;
+  sub?: ReactNode; delta?: ReactNode; extra?: ReactNode; loading: boolean; onOpen: () => void;
 }) {
   return (
-    <div className="nd-kpi">
+    <div className={`nd-kpi ${tone}`}>
       <button type="button" className="nd-kpi-main" onClick={onOpen} aria-label={`${label}: переглянути по філіях`}>
-        <span className="nd-kpi-label">{label}</span>
-        {loading ? <span className="nd-skel" style={{ width: 120, height: 32 }} /> : <span className="nd-kpi-value">{value}</span>}
+        <span className="nd-kpi-top">
+          <span className="nd-kpi-ic" aria-hidden="true">{icon}</span>
+          <span className="nd-kpi-label">{label}</span>
+        </span>
+        {loading ? <span className="nd-skel on-color" style={{ width: 120, height: 34 }} /> : <span className="nd-kpi-value">{value}</span>}
+        {delta && <span className="nd-kpi-delta">{delta}</span>}
         {sub && <span className="nd-kpi-sub">{sub}</span>}
         <span className="nd-kpi-go">Переглянути по філіях →</span>
       </button>
       {extra && <div className="nd-kpi-extra">{extra}</div>}
     </div>
+  );
+}
+
+/** Картка «Філії»: стан кожної філії за період одним словом; назва веде в «Огляд філії». */
+function BranchStatus({ rows, attention, loading, onOpen }: {
+  rows: BranchRow[]; attention: AttentionItem[]; loading: boolean; onOpen: (panel: Panel) => void;
+}) {
+  return (
+    <section className="nd-card nd-list-card" aria-labelledby="nd-bs-title">
+      <header className="nd-card-head">
+        <h3 id="nd-bs-title">Стан філій</h3>
+        <span className="nd-meta">за обраний період</span>
+      </header>
+      <div className="nd-rows">
+        {loading && rows.length === 0 && <><span className="nd-skel" style={{ width: "70%" }} /><span className="nd-skel" style={{ width: "60%" }} /></>}
+        {!loading && rows.length === 0 && <div className="nd-empty">У вибраних немає активних філій</div>}
+        {rows.map((r) => {
+          const signals = branchSignals(r, attention);
+          const first = signals[0];
+          return (
+            <div className="nd-row static" key={r.tenant_id}>
+              <button type="button" className="nd-row-name" onClick={() => onOpen({ kind: "branch", branch: r.tenant_id, scope: "period" })}>
+                <b>{r.tenant_name}</b><span>Огляд філії →</span>
+              </button>
+              {first ? (
+                <button type="button" className={`nd-pill ${first.tone}`} onClick={() => onOpen({ kind: first.kind, branch: r.tenant_id, scope: "period" })}>
+                  {first.text}{signals.length > 1 && ` +${signals.length - 1}`}
+                </button>
+              ) : (
+                <span className="nd-pill ok">усе гаразд</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/** Картка «Сигнали за період»: невідмічені уроки згорнуто по філіях, решта сигналів — як є; до 5 рядків. */
+function PeriodSignals({ items, loading, onOpen }: { items: AttentionItem[]; loading: boolean; onOpen: (panel: Panel) => void }) {
+  const byTenant = new Map<number, { name: string; n: number }>();
+  const others: AttentionItem[] = [];
+  for (const it of items) {
+    if (it.anomaly_type === UNMARKED_LESSON) {
+      const cur = byTenant.get(it.tenant_id) ?? { name: it.tenant_name, n: 0 };
+      cur.n += 1;
+      byTenant.set(it.tenant_id, cur);
+    } else others.push(it);
+  }
+  const rows: Array<{ key: string; tone: "warn" | "risk"; tag: string; title: string; sub: string; panel: Panel }> = [
+    ...others.map((it) => ({
+      key: `${it.anomaly_type}-${it.tenant_id}-${it.lesson_date ?? ""}`,
+      tone: (it.severity === "critical" || it.severity === "high" ? "risk" : "warn") as "warn" | "risk",
+      tag: (SEVERITY[it.severity] ?? SEVERITY.info).label,
+      title: `${it.tenant_name}: ${lower(ANOMALY_LABELS[it.anomaly_type] ?? it.anomaly_type)}`,
+      sub: it.summary,
+      panel: { kind: it.anomaly_type === "ATTENDANCE_DROP" ? "attendance" : "attention", branch: it.tenant_id, scope: "period" } as Panel,
+    })),
+    ...[...byTenant].map(([id, x]) => ({
+      key: `unmarked-${id}`, tone: "warn" as const, tag: "Перевірити",
+      title: `${countLessons(x.n)} не відмічено`, sub: x.name,
+      panel: { kind: "unmarked", branch: id, scope: "period" } as Panel,
+    })),
+  ];
+  const shown = rows.slice(0, 5);
+  return (
+    <section className="nd-card nd-list-card" aria-labelledby="nd-ps-title">
+      <header className="nd-card-head">
+        <h3 id="nd-ps-title">Сигнали за період</h3>
+        <span className="nd-meta">{rows.length ? `${formatNumber(rows.length)} ${pluralUk(rows.length, "сигнал", "сигнали", "сигналів")}` : "за обраний період"}</span>
+      </header>
+      {loading ? (
+        <div className="nd-rows" aria-busy="true"><span className="nd-skel" style={{ width: "76%" }} /><span className="nd-skel" style={{ width: "58%" }} /></div>
+      ) : rows.length === 0 ? (
+        <div className="nd-rows"><div className="nd-row static"><span className="nd-pill ok">Спокійно</span><span className="nd-row-text"><span>сигналів за період немає</span></span></div></div>
+      ) : (
+        <div className="nd-rows">
+          {shown.map((r) => (
+            <button key={r.key} type="button" className="nd-row" onClick={() => onOpen(r.panel)}>
+              <span className={`nd-pill ${r.tone}`}>{r.tag}</span>
+              <span className="nd-row-text"><b>{r.title}</b><span>{r.sub}</span></span>
+              <span className="nd-row-go" aria-hidden="true">→</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {!loading && rows.length > shown.length && (
+        <button type="button" className="nd-card-link" onClick={() => onOpen({ kind: "attention", branch: null, scope: "period" })}>
+          Усі сигнали ({formatNumber(rows.length)}) →
+        </button>
+      )}
+    </section>
   );
 }

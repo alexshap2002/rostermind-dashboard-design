@@ -1,5 +1,5 @@
 import { formatNumber, pluralUk } from "../../lib/format";
-import type { BranchRow } from "./api";
+import { UNMARKED_LESSON, type AttentionItem, type BranchRow } from "./api";
 
 /** Що відкриває бічна панель: показник (з філією чи без) або огляд філії. */
 export type PanelKind = "students" | "new" | "lessons" | "attendance" | "payroll" | "unmarked" | "today" | "attention" | "branch";
@@ -50,3 +50,21 @@ export function Delta({ value, unit, tone = "good", suffix }: {
 }
 
 export const countLessons = (n: number) => `${formatNumber(n)} ${pluralUk(n, "урок", "уроки", "уроків")}`;
+
+/** Стан філії за період — з тих самих даних, що й усюди: невідмічені з рядка філії,
+    решта — з сигналів сервера. Тож картка «Філії», колонка «Статус» і панель кажуть одне й те саме. */
+export interface BranchSignal { kind: PanelKind; tone: "warn" | "risk" | "neutral"; text: string }
+
+export function branchSignals(row: BranchRow, items: AttentionItem[]): BranchSignal[] {
+  const own = items.filter((it) => it.tenant_id === row.tenant_id && it.anomaly_type !== UNMARKED_LESSON);
+  const out: BranchSignal[] = [];
+  if (row.lessons_unmarked_overdue > 0) {
+    out.push({ kind: "unmarked", tone: "warn", text: `${formatNumber(row.lessons_unmarked_overdue)} не відмічено` });
+  }
+  if (own.some((it) => it.anomaly_type === "ATTENDANCE_DROP")) {
+    out.push({ kind: "attendance", tone: "risk", text: "відвідуваність впала" });
+  }
+  const rest = own.filter((it) => it.anomaly_type !== "ATTENDANCE_DROP").length;
+  if (rest > 0) out.push({ kind: "attention", tone: "neutral", text: `ще ${formatNumber(rest)} ${pluralUk(rest, "сигнал", "сигнали", "сигналів")}` });
+  return out;
+}
