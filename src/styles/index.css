@@ -1285,10 +1285,14 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
   .teacher-home .t-today { grid-column: 1 / -1; }
 }
 
-/* ── Мережа шкіл (дашборд власника, бриф 19.10.2026) ── */
+/* ── Варіант 3: Картки філій (дашборд власника, бриф 19.10.2026) ──
+   Ідея: власник мислить філіями. Мережа — компактна зведена стрічка зверху,
+   головний блок — картка на кожну філію з тими самими показниками й переходами. */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.nd-page { display: flex; flex-direction: column; gap: 16px; }
-.nd-demo { background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 10px 14px; font-size: 13.5px; }
+.nd-page { display: flex; flex-direction: column; gap: 14px; }
+/* Діти флекс-колонки не ширші за сторінку: широка таблиця прокручується всередині своєї картки */
+.nd-page > * { min-width: 0; }
+.nd-demo { background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 8px 14px; font-size: 13px; }
 .nd-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 10px 8px 10px 14px; font-size: 14px; }
 .nd-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
 .nd-skel { display: inline-block; height: 18px; border-radius: 6px; background: linear-gradient(90deg, #efe8dc, #f7f2ea, #efe8dc); background-size: 200% 100%; animation: nd-shimmer 1.2s linear infinite; }
@@ -1316,15 +1320,35 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 .nd-check:hover { background: #f5efe4; }
 .nd-check input { width: 16px; height: 16px; accent-color: var(--terra); }
 
-/* На зараз */
-.nd-now { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 14px; }
-.nd-now-head { display: flex; flex-direction: column; min-width: 120px; }
-.nd-now-head h3 { font-size: 15px; font-weight: 700; }
-.nd-now-head span { font-size: 12px; color: var(--text-3); }
-.nd-now-items { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; }
+/* Зведена стрічка мережі: чотири показники в один рядок, розділені тонкими лініями */
+.nd-strip { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.nd-strip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; padding: 14px 18px 0; }
+.nd-strip-head h3 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.nd-strip-cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px 4px 4px; }
+.nd-stat { display: flex; flex-direction: column; min-width: 0; border-left: 1px solid var(--line); }
+.nd-stat:first-child { border-left: none; }
+.nd-stat-main { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 10px 14px 6px; cursor: pointer; border-radius: 10px; width: 100%; }
+.nd-stat-main:hover { background: #faf6ef; }
+.nd-stat-main:hover .nd-stat-go { color: var(--terra-deep); text-decoration: underline; }
+.nd-stat-label { font-size: 13.5px; font-weight: 600; color: var(--text-2); }
+.nd-stat-value { font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.nd-stat-value small { font-size: 15px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
+.nd-stat-sub { font-size: 13px; color: var(--text-3); }
+.nd-stat-go { font-size: 12.5px; font-weight: 600; color: var(--terra-deep); margin-top: 2px; }
+.nd-stat-extra { padding: 0 14px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.nd-chip-new { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ok-text); background: var(--ok-soft); border: none; border-radius: 99px; padding: 4px 10px; min-height: 28px; cursor: pointer; }
+.nd-chip-new.zero { color: var(--text-2); background: #ece5d8; }
+.nd-chip-new:hover { text-decoration: underline; }
+
+/* На зараз: один рядок сигналів, кожен — кнопка до своєї вибірки */
+.nd-now { display: flex; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; padding: 0 2px; }
+.nd-now-head { display: flex; flex-direction: column; flex-shrink: 0; min-width: 120px; padding-top: 4px; }
+.nd-now-head h3 { font-size: 14.5px; font-weight: 700; line-height: 1.3; }
+.nd-now-head span { font-size: 12.5px; color: var(--text-3); }
+.nd-now-items { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; min-width: 0; }
 .nd-now-all { font-size: 13px; padding: 8px 4px; }
-.nd-signal { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 42px; text-align: left; cursor: pointer; max-width: 100%; }
-button.nd-signal:hover { border-color: #cfc2ad; background: #efe8dc; }
+.nd-signal { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 13.5px; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; min-height: 40px; text-align: left; cursor: pointer; max-width: 100%; }
+button.nd-signal:hover { border-color: #cfc2ad; background: #faf6ef; }
 .nd-signal svg { width: 16px; height: 16px; }
 .nd-signal b { font-weight: 700; }
 .nd-signal-sub { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
@@ -1337,26 +1361,53 @@ button.nd-signal:hover { border-color: #cfc2ad; background: #efe8dc; }
 .nd-signal.wide { width: 100%; }
 
 /* Заголовок секції */
-.nd-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; margin-top: 8px; }
-.nd-section-head h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.nd-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; margin-top: 4px; }
+.nd-section-head h3 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
 .nd-compare, .nd-hint { font-size: 13px; color: var(--text-3); }
 .nd-aux { font-size: 13px; color: var(--text-3); margin-top: -6px; }
 
-/* KPI */
-.nd-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.nd-kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); display: flex; flex-direction: column; transition: border-color .15s, background .15s; }
-.nd-kpi:hover { border-color: #cfc2ad; }
-.nd-kpi-main { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 16px 16px 10px; cursor: pointer; border-radius: var(--r-lg); flex: 1; }
-.nd-kpi-label { font-size: 14px; font-weight: 600; color: var(--text-2); }
-.nd-kpi-value { font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.nd-kpi-value small { font-size: 15px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
-.nd-kpi-sub { font-size: 13px; color: var(--text-3); }
-.nd-kpi-go { font-size: 13px; font-weight: 600; color: var(--terra-deep); margin-top: 4px; }
-.nd-kpi-main:hover .nd-kpi-go { text-decoration: underline; }
-.nd-kpi-extra { padding: 0 16px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
-.nd-kpi-chip { font: inherit; font-size: 13px; font-weight: 600; color: var(--ok-text); background: var(--ok-soft); border: none; border-radius: 8px; padding: 6px 10px; min-height: 32px; cursor: pointer; }
-.nd-kpi-chip:hover { text-decoration: underline; }
-.nd-kpi-status { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Картки філій — головний блок */
+.nd-bcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.nd-bcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); display: flex; flex-direction: column; min-width: 0; transition: border-color .15s, box-shadow .15s; }
+.nd-bcard:hover { border-color: #cfc2ad; box-shadow: var(--shadow-hover); }
+.nd-bcard-skel { padding: 18px; gap: 14px; }
+.nd-bcard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 16px 18px 12px; }
+.nd-bcard-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nd-bcard-name { font: inherit; font-size: 19px; font-weight: 700; letter-spacing: -.01em; color: var(--text); background: none; border: none; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 0; border-radius: 6px; }
+.nd-bcard-hint { font-size: 12.5px; font-weight: 600; color: var(--terra-deep); letter-spacing: 0; }
+.nd-bcard-name:hover .nd-bcard-hint { text-decoration: underline; }
+.nd-bcard-meta { font-size: 12.5px; color: var(--text-3); }
+.nd-bcard-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; flex-shrink: 0; max-width: 55%; }
+.nd-badge { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: #ece5d8; color: var(--text-2); border: none; white-space: nowrap; }
+.nd-badge svg { width: 14px; height: 14px; stroke-width: 2.4; }
+button.nd-badge { cursor: pointer; }
+button.nd-badge:hover { text-decoration: underline; }
+.nd-badge.ok { background: var(--ok-soft); color: var(--ok-text); }
+.nd-badge.warn { background: var(--warn-soft); color: var(--warn-text); }
+.nd-badge.risk { background: var(--risk-soft); color: var(--risk-text); }
+.nd-bcard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.nd-metric { display: flex; flex-direction: column; min-width: 0; border-bottom: 1px solid var(--line); }
+.nd-metric:nth-child(odd) { border-right: 1px solid var(--line); }
+.nd-metric-main { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 12px 16px 6px; cursor: pointer; width: 100%; flex: 1; }
+.nd-metric-main:hover { background: #faf6ef; }
+.nd-metric-main:hover .nd-metric-label { color: var(--terra-deep); text-decoration: underline; text-decoration-color: #e7c3b4; }
+.nd-metric-label { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.nd-metric-label::after { content: " →"; color: var(--text-4); }
+.nd-metric-main:hover .nd-metric-label::after { color: var(--terra-deep); }
+.nd-metric-value { font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.nd-metric-value small { font-size: 14px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
+.nd-metric-sub { font-size: 12.5px; color: var(--text-3); }
+.nd-metric-extra { padding: 0 16px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 40px; }
+.nd-spark { display: block; overflow: visible; }
+.nd-spark-line { fill: none; stroke: var(--info-text); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.nd-spark-dot { fill: var(--info-text); }
+.nd-spark-none { font-size: 12.5px; color: var(--text-3); }
+.nd-bcard-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px 14px; margin-top: auto; }
+.nd-share { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
+.nd-share-bar { display: block; height: 5px; border-radius: 99px; background: #ece5d8; overflow: hidden; max-width: 180px; }
+.nd-share-bar i { display: block; height: 100%; background: var(--text-3); border-radius: 99px; }
+.nd-share-text { font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
+.nd-bcard-work { min-height: 40px; white-space: nowrap; }
 
 /* Пігулки статусів */
 .nd-pill { display: inline-flex; align-items: center; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: #ece5d8; color: var(--text-2); border: none; }
@@ -1372,10 +1423,11 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-delta.risk { color: var(--risk-text); }
 .nd-delta-sfx { font-weight: 500; color: var(--text-3); }
 
-/* Таблиця філій */
-.nd-table-scroll { overflow-x: auto; }
+/* Таблиця порівняння філій (запасний вигляд рядками) */
+/* position: relative — щоб .sr-only усередині таблиці не розтягував сторінку за край прокрутки */
+.nd-table-scroll { overflow-x: auto; position: relative; }
 .nd-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.nd-table th, .nd-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.nd-table th, .nd-table td { padding: 11px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 .nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; background: #faf6ef; }
 .nd-table thead th:first-child { border-top-left-radius: var(--r-lg); }
 .nd-table thead th:last-child { border-top-right-radius: var(--r-lg); }
@@ -1387,7 +1439,8 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-table .th-sort { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-3); background: none; border: none; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; padding: 4px 0; }
 .nd-table .th-sort.on { color: var(--text); }
 .nd-table .r .th-sort { flex-direction: row-reverse; }
-.nd-branch-name { font: inherit; font-size: 15px; font-weight: 700; color: var(--text); background: none; border: none; cursor: pointer; text-align: left; display: flex; flex-direction: column; padding: 2px 0; }
+.nd-table thead th .th-arrow { font-size: 10px; }
+.nd-branch-name { font: inherit; font-size: 15px; font-weight: 700; color: var(--text); background: none; border: none; cursor: pointer; text-align: left; display: flex; flex-direction: column; padding: 2px 0; white-space: nowrap; }
 .nd-branch-hint { font-size: 12px; font-weight: 500; color: var(--terra-deep); }
 .nd-branch-name:hover .nd-branch-hint { text-decoration: underline; }
 .nd-cell { font: inherit; color: inherit; background: none; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; margin: -6px -8px; cursor: pointer; text-align: inherit; font-variant-numeric: tabular-nums; }
@@ -1398,6 +1451,10 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-signals { display: flex; flex-wrap: wrap; gap: 6px; }
 .nd-calm { color: var(--text-4); }
 .nd-act { text-align: right; white-space: nowrap; }
+/* Таблиця всередині розгортки: без другої рамки */
+.nd-details .nd-branches { border: none; border-radius: 0; }
+.nd-details .nd-table thead th { background: transparent; border-radius: 0; border-top: 1px solid var(--line); }
+.nd-details .nd-table tfoot th, .nd-details .nd-table tfoot td { background: transparent; border-top: 1px solid var(--line); }
 
 /* Графік */
 .nd-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; padding: 16px 16px 4px; }
@@ -1422,7 +1479,7 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-table-alt { margin-top: 10px; font-size: 13px; }
 .nd-table-alt summary { cursor: pointer; color: var(--terra-deep); font-weight: 600; padding: 6px 0; }
 
-/* Детальні звіти */
+/* Розгортки: порівняння таблицею, детальні звіти */
 .nd-details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 4px 16px 16px; }
 .nd-details > summary { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; cursor: pointer; padding: 12px 0; list-style: none; }
 .nd-details > summary::-webkit-details-marker { display: none; }
@@ -1432,7 +1489,6 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-details > summary span { font-size: 13px; color: var(--text-3); }
 .nd-reveal { padding: 10px 14px 4px; }
 .nd-more { font-size: 13.5px; padding: 8px 0; }
-.nd-table thead th .th-arrow { font-size: 10px; }
 
 /* Бічна панель */
 .nd-drawer-wrap { position: fixed; inset: 0; z-index: 80; }
@@ -1470,13 +1526,31 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-att-sub { font-size: 12.5px; color: var(--text-3); }
 .nd-work { align-self: flex-start; min-height: 42px; }
 
-@media (max-width: 1100px) { .nd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Дві колонки карток і непарна остання — розтягуємо її на весь рядок, показники в один ряд */
+@media (min-width: 761px) and (max-width: 1099px) {
+  .nd-bcard:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .nd-bcard:last-child:nth-child(odd) .nd-bcard-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .nd-bcard:last-child:nth-child(odd) .nd-metric { border-right: 1px solid var(--line); }
+  .nd-bcard:last-child:nth-child(odd) .nd-metric:last-child { border-right: none; }
+}
+@media (max-width: 1100px) {
+  .nd-strip-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nd-stat:nth-child(3) { border-left: none; }
+  .nd-stat:nth-child(n + 3) { border-top: 1px solid var(--line); }
+}
 @media (max-width: 760px) {
-  .nd-kpis { grid-template-columns: 1fr; }
-  .nd-kpi-value { font-size: 28px; }
+  .nd-strip-cells { grid-template-columns: 1fr; padding: 4px 0 0; }
+  .nd-stat { border-left: none; border-top: 1px solid var(--line); }
+  .nd-stat:first-child { border-top: none; }
+  .nd-stat-value { font-size: 26px; }
   .nd-now { flex-direction: column; align-items: stretch; }
   .nd-signal { width: 100%; }
   .nd-spacer { display: none; }
+  .nd-bcards { grid-template-columns: 1fr; }
+  .nd-bcard-head { flex-direction: column; }
+  .nd-bcard-badges { justify-content: flex-start; max-width: none; }
+  .nd-bcard-foot { flex-direction: column; align-items: stretch; }
+  .nd-share-bar { max-width: none; }
   /* Таблиця філій → картки з тими самими полями й переходами */
   .nd-branches .nd-table thead { display: none; }
   .nd-branches .nd-table, .nd-branches .nd-table tbody, .nd-branches .nd-table tfoot, .nd-branches .nd-table tr { display: block; }

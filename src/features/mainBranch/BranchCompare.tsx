@@ -1,13 +1,15 @@
 import type { ReactNode } from "react";
 import { formatCurrency, formatNumber, formatPercent, pluralUk } from "../../lib/format";
-import type { BranchRow } from "./api";
+import { ANOMALY_LABELS, UNMARKED_LESSON, type AttentionItem, type BranchRow } from "./api";
 import { Delta, networkTotals, type Panel, type PanelKind } from "./metrics";
 import { SortTh, useSort } from "./sort";
 
+const SHOWN_SIGNALS = 1;
+
 interface Props {
   rows: BranchRow[];
-  /** Сигнали уваги за обраний період по філіях (крім невідмічених — вони в окремій колонці даних). */
-  attentionByTenant: Record<string, number>;
+  /** Сигнали уваги за обраний період (невідмічені уроки — окремим числом з рядка філії). Ті самі, що й у картках. */
+  attentionItems: AttentionItem[];
   loading: boolean;
   canEnter: boolean;
   busyId: number | null;
@@ -17,8 +19,10 @@ interface Props {
 
 /** Порівняння філій — головний робочий блок. Клітинка відкриває той самий показник лише цієї філії,
     назва — «Огляд філії» в аналітиці мережі, а «Працювати у філії» змінює робочий контекст. */
-export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busyId, onOpen, onEnter }: Props) {
-  const withAttention = rows.map((r) => ({ ...r, attention: attentionByTenant[String(r.tenant_id)] ?? 0 }));
+export function BranchCompare({ rows, attentionItems, loading, canEnter, busyId, onOpen, onEnter }: Props) {
+  const signalsOf = (tenantId: number) => attentionItems.filter((it) => it.tenant_id === tenantId && it.anomaly_type !== UNMARKED_LESSON);
+  // «Увага» для сортування: невідмічені уроки + решта сигналів періоду.
+  const withAttention = rows.map((r) => ({ ...r, attention: r.lessons_unmarked_overdue + signalsOf(r.tenant_id).length }));
   const sort = useSort(withAttention, "students_total", "desc");
   const net = networkTotals(rows);
   const cell = (kind: PanelKind, row: BranchRow, children: ReactNode, label: string) => (
@@ -52,12 +56,16 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
               <tr><td colSpan={8}><div className="nd-empty">У вибраних немає активних філій</div></td></tr>
             )}
             {sort.sorted.map((r) => {
-              const signals = [
-                r.lessons_unmarked_overdue > 0 ? { text: `${formatNumber(r.lessons_unmarked_overdue)} не відмічено`, kind: "unmarked" as const } : null,
-                r.attendance_change_pp !== null && r.attendance_change_pp <= -5 ? { text: "відвідуваність падає", kind: "attendance" as const } : null,
-              ].filter(Boolean) as { text: string; kind: PanelKind }[];
-              // Сигнали періоду містять і кожен невідмічений урок окремо — їх уже показано числом вище.
-              const extra = Math.max(0, r.attention - r.lessons_unmarked_overdue - (signals.some((x) => x.kind === "attendance") ? 1 : 0));
+              const items = signalsOf(r.tenant_id);
+              const signals: { text: string; kind: PanelKind; tone: "warn" | "risk" }[] = [
+                ...(r.lessons_unmarked_overdue > 0 ? [{ text: `${formatNumber(r.lessons_unmarked_overdue)} не відмічено`, kind: "unmarked" as const, tone: "warn" as const }] : []),
+                ...items.slice(0, SHOWN_SIGNALS).map((it) => ({
+                  text: ANOMALY_LABELS[it.anomaly_type] ?? it.summary,
+                  kind: (it.anomaly_type === "ATTENDANCE_DROP" || it.anomaly_type === "CHRONIC_ABSENCE_CLUSTER" ? "attendance" : "attention") as PanelKind,
+                  tone: (it.severity === "critical" || it.severity === "high" ? "risk" : "warn") as "warn" | "risk",
+                })),
+              ];
+              const extra = Math.max(0, items.length - SHOWN_SIGNALS);
               return (
                 <tr key={r.tenant_id}>
                   <th scope="row" data-label="Філія">
@@ -88,7 +96,7 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
                     ) : (
                       <span className="nd-signals">
                         {signals.map((s) => (
-                          <button key={s.kind} type="button" className={`nd-pill ${s.kind === "attendance" ? "risk" : "warn"}`} onClick={() => onOpen({ kind: s.kind, branch: r.tenant_id, scope: "period" })}>
+                          <button key={s.kind} type="button" className={`nd-pill ${s.tone}`} onClick={() => onOpen({ kind: s.kind, branch: r.tenant_id, scope: "period" })}>
                             {s.text}
                           </button>
                         ))}
