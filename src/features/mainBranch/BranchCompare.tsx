@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { formatCurrency, formatNumber, formatPercent, pluralUk } from "../../lib/format";
+import { IconAlert } from "../../lib/icons";
 import type { BranchRow } from "./api";
 import { Delta, networkTotals, type Panel, type PanelKind } from "./metrics";
 import { SortTh, useSort } from "./sort";
@@ -88,12 +89,12 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
                     ) : (
                       <span className="nd-signals">
                         {signals.map((s) => (
-                          <button key={s.kind} type="button" className={`nd-pill ${s.kind === "attendance" ? "risk" : "warn"}`} onClick={() => onOpen({ kind: s.kind, branch: r.tenant_id, scope: "period" })}>
-                            {s.text}
+                          <button key={s.kind} type="button" className={`nd-sig${s.kind === "attendance" ? " risk" : ""}`} onClick={() => onOpen({ kind: s.kind, branch: r.tenant_id, scope: "period" })}>
+                            <IconAlert aria-hidden="true" />{s.text}
                           </button>
                         ))}
                         {extra > 0 && (
-                          <button type="button" className="nd-pill" onClick={() => onOpen({ kind: "attention", branch: r.tenant_id, scope: "period" })}>
+                          <button type="button" className="nd-sig more" onClick={() => onOpen({ kind: "attention", branch: r.tenant_id, scope: "period" })}>
                             ще {formatNumber(extra)} {pluralUk(extra, "сигнал", "сигнали", "сигналів")}
                           </button>
                         )}
@@ -102,8 +103,8 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
                   </td>
                   <td className="nd-act">
                     {canEnter && (
-                      <button type="button" className="btn ghost sm" disabled={busyId !== null} onClick={() => onEnter(r)}>
-                        {busyId === r.tenant_id ? "Переходимо…" : "Працювати у філії"}
+                      <button type="button" className="nd-work-btn" disabled={busyId !== null} onClick={() => onEnter(r)}>
+                        {busyId === r.tenant_id ? "Переходимо…" : "Працювати у філії →"}
                       </button>
                     )}
                   </td>

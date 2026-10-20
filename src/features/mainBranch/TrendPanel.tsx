@@ -34,8 +34,8 @@ export function TrendPanel({ points, loading }: { points: TrendPoint[]; loading:
   const n = points.length;
   const innerW = width - PAD_L - PAD_R;
   const x = (i: number) => PAD_L + (n <= 1 ? innerW / 2 : (i * innerW) / (n - 1));
-  const rateH = 150;
-  const barsH = 78;
+  const rateH = 132;
+  const barsH = 62;
   const yRate = (v: number) => 8 + (1 - v / 100) * (rateH - 16);
   const maxLessons = Math.max(1, ...points.map((p) => p.lessons));
   const niceMax = maxLessons <= 5 ? 5 : Math.ceil(maxLessons / 5) * 5;
@@ -61,7 +61,7 @@ export function TrendPanel({ points, loading }: { points: TrendPoint[]; loading:
   };
   const h = hover !== null ? points[hover] : null;
 
-  if (loading) return <div className="nd-chart-box"><span className="nd-skel" style={{ width: "100%", height: 230 }} /></div>;
+  if (loading) return <div className="nd-chart-box"><span className="nd-skel" style={{ width: "100%", height: 200 }} /></div>;
   if (n === 0) return <div className="nd-empty">За період немає даних</div>;
 
   return (
@@ -85,7 +85,7 @@ export function TrendPanel({ points, loading }: { points: TrendPoint[]; loading:
           ))}
           {segments.map((s, i) => <polyline key={i} points={s} className="nd-line" />)}
           {points.map((p, i) => (p.rate !== null && (n <= 31 || i === hover) ? (
-            <circle key={i} cx={x(i)} cy={yRate(p.rate)} r={i === hover ? 5 : 3} className="nd-dot" />
+            <circle key={i} cx={x(i)} cy={yRate(p.rate)} r={i === hover ? 5 : 3} className="nd-dot-pt" />
           ) : null))}
           {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={4} y2={rateH - 4} className="nd-cross" />}
         </svg>

@@ -13,6 +13,7 @@ import { BranchCompare } from "./BranchCompare";
 import { Delta, PANEL_KINDS, type Panel, type PanelKind } from "./metrics";
 import { MetricPanel } from "./MetricPanel";
 import { NowStrip } from "./NowStrip";
+import { PeriodSignals } from "./PeriodSignals";
 import { ReportTabs, TABS, type Tab } from "./ReportTabs";
 import { TrendPanel, type TrendPoint } from "./TrendPanel";
 
@@ -76,8 +77,8 @@ function compareText(comparison: MainBranchKpi["comparison"], filters: MainBranc
 type Preset = "today" | "week" | "month" | "prev" | "custom";
 const PRESETS: { key: Exclude<Preset, "custom">; label: string }[] = [
   { key: "today", label: "Сьогодні" },
-  { key: "week", label: "Цей тиждень" },
-  { key: "month", label: "Цей місяць" },
+  { key: "week", label: "Тиждень" },
+  { key: "month", label: "Місяць" },
   { key: "prev", label: "Минулий місяць" },
 ];
 
@@ -296,6 +297,48 @@ export function MainBranchPage() {
   const attentionByTenant = periodAttention.data?.totals.by_tenant ?? {};
   const open = (kind: PanelKind) => () => setPanel({ kind, branch: null, scope: "period" });
 
+  /* ── А. Контекст: один період, один фільтр філій, вторинний експорт — у шапці, праворуч від назви ── */
+  const toolbar = (
+    <div className="nd-toolbar" role="group" aria-label="Період і філії">
+      <div className="nd-seg" role="radiogroup" aria-label="Період">
+        {PRESETS.map((p) => (
+          <button key={p.key} type="button" role="radio" aria-checked={preset === p.key} className={preset === p.key ? "on" : ""}
+            onClick={() => { setCustomOpen(false); setRange(presetRange(p.key)); }}>{p.label}</button>
+        ))}
+        <button type="button" role="radio" aria-checked={preset === "custom"} className={preset === "custom" ? "on" : ""} onClick={() => setCustomOpen(true)}>Свій період</button>
+      </div>
+      {preset === "custom" && (
+        <div className="nd-dates">
+          <label><span>Від</span><input type="date" value={filters.dateFrom} max={filters.dateTo} onChange={(e) => e.target.value && setRange({ dateFrom: e.target.value, dateTo: filters.dateTo })} /></label>
+          <label><span>До</span><input type="date" value={filters.dateTo} min={filters.dateFrom} onChange={(e) => e.target.value && setRange({ dateFrom: filters.dateFrom, dateTo: e.target.value })} /></label>
+        </div>
+      )}
+      {activeBranches.length > 1 && (
+        <div className="nd-dd" ref={branchMenuRef}>
+          <button type="button" className="nd-dd-btn" aria-haspopup="true" aria-expanded={branchMenu} onClick={() => setBranchMenu((v) => !v)}>
+            {branchesLabel} <span aria-hidden="true">▾</span>
+          </button>
+          {branchMenu && (
+            <div className="nd-dd-menu">
+              <label className="nd-check"><input type="checkbox" checked={filters.branchIds.length === 0} onChange={() => setFilters((f) => ({ ...f, refresh: false, branchIds: [] }))} /> Усі філії</label>
+              {activeBranches.map((b) => (
+                <label key={b.tenant_id} className="nd-check">
+                  <input type="checkbox" checked={filters.branchIds.includes(b.tenant_id)} onChange={() => toggleBranch(b.tenant_id)} /> {b.tenant_name}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      <button type="button" className="btn ghost sm" onClick={onRefresh}>Оновити</button>
+      {network.data?.capabilities.can_export_full_report && (
+        <button type="button" className="btn ghost sm keep-label" disabled={downloading} onClick={downloadReport}>
+          <IconDownload /><span>{downloading ? "Готуємо…" : "Excel"}</span>
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <PageShell
       title="Мережа шкіл"
@@ -304,50 +347,10 @@ export function MainBranchPage() {
            pendingCount ? `${pendingCount} ${pluralUk(pendingCount, "чекає", "чекають", "чекають")} оплати` : null,
            k ? formatUpdatedAt(k.generated_at) : null].filter(Boolean).join(" · ")
         : "Завантаження…"}
+      actions={toolbar}
     >
       <div className="nd-page">
-        {DEMO && <div className="nd-demo" role="note"><b>Демо-версія</b> · дані вигадані, лише для обговорення дизайну. Зміни й переходи у філії вимкнено.</div>}
-
-        {/* ── А. Контекст: один період, один фільтр філій, вторинний експорт ── */}
-        <div className="nd-toolbar" role="group" aria-label="Період і філії">
-          <div className="nd-seg" role="radiogroup" aria-label="Період">
-            {PRESETS.map((p) => (
-              <button key={p.key} type="button" role="radio" aria-checked={preset === p.key} className={preset === p.key ? "on" : ""}
-                onClick={() => { setCustomOpen(false); setRange(presetRange(p.key)); }}>{p.label}</button>
-            ))}
-            <button type="button" role="radio" aria-checked={preset === "custom"} className={preset === "custom" ? "on" : ""} onClick={() => setCustomOpen(true)}>Свій період</button>
-          </div>
-          {preset === "custom" && (
-            <div className="nd-dates">
-              <label><span>Від</span><input type="date" value={filters.dateFrom} max={filters.dateTo} onChange={(e) => e.target.value && setRange({ dateFrom: e.target.value, dateTo: filters.dateTo })} /></label>
-              <label><span>До</span><input type="date" value={filters.dateTo} min={filters.dateFrom} onChange={(e) => e.target.value && setRange({ dateFrom: filters.dateFrom, dateTo: e.target.value })} /></label>
-            </div>
-          )}
-          {activeBranches.length > 1 && (
-            <div className="nd-dd" ref={branchMenuRef}>
-              <button type="button" className="nd-dd-btn" aria-haspopup="true" aria-expanded={branchMenu} onClick={() => setBranchMenu((v) => !v)}>
-                {branchesLabel} <span aria-hidden="true">▾</span>
-              </button>
-              {branchMenu && (
-                <div className="nd-dd-menu">
-                  <label className="nd-check"><input type="checkbox" checked={filters.branchIds.length === 0} onChange={() => setFilters((f) => ({ ...f, refresh: false, branchIds: [] }))} /> Усі філії</label>
-                  {activeBranches.map((b) => (
-                    <label key={b.tenant_id} className="nd-check">
-                      <input type="checkbox" checked={filters.branchIds.includes(b.tenant_id)} onChange={() => toggleBranch(b.tenant_id)} /> {b.tenant_name}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          <span className="nd-spacer" />
-          <button type="button" className="btn ghost sm" onClick={onRefresh}>Оновити</button>
-          {network.data?.capabilities.can_export_full_report && (
-            <button type="button" className="btn ghost sm keep-label" disabled={downloading} onClick={downloadReport}>
-              <IconDownload /><span>{downloading ? "Готуємо…" : "Excel"}</span>
-            </button>
-          )}
-        </div>
+        {DEMO && <p className="nd-demo" role="note"><b>Демо-версія</b> · дані вигадані, лише для обговорення дизайну; зміни й переходи у філії вимкнено.</p>}
 
         {notice && <div className="nd-notice" role="status">{notice}<button type="button" className="nd-icon-btn" aria-label="Закрити" onClick={() => setNotice(null)}>✕</button></div>}
         {failed && (
@@ -357,7 +360,7 @@ export function MainBranchPage() {
           </div>
         )}
 
-        {/* ── Б. На зараз ── */}
+        {/* ── Б. На зараз — статус-лінія ── */}
         <NowStrip
           today={todayKpi.data}
           unmarked={unmarked.data}
@@ -369,7 +372,7 @@ export function MainBranchPage() {
 
         {/* ── В. Основні показники за період ── */}
         <div className="nd-section-head">
-          <h3>{periodLabel} · {branchesLabel}</h3>
+          <h3>За період <strong>{periodLabel} · {branchesLabel}</strong></h3>
           {k && <span className="nd-compare" title="Як рахуємо зміну">{compareText(k.comparison, filters)}</span>}
         </div>
         <div className="nd-kpis">
@@ -427,22 +430,25 @@ export function MainBranchPage() {
           <p className="nd-aux">{pendingCount} {pluralUk(pendingCount, "філія чекає", "філії чекають", "філій чекають")} оплати RosterMind — <a className="link" href="/branches">Філії й підписка</a></p>
         )}
 
-        {/* ── Д. Динаміка ── */}
-        <section className="nd-card nd-trend">
-          <div className="nd-card-head">
-            <div>
-              <h3>Динаміка за період</h3>
-              <p>{span < 7 ? "Для динаміки оберіть щонайменше тиждень" : mode === "daily" ? "по днях" : "по тижнях"}</p>
-            </div>
-            {span >= 7 && (
-              <div className="nd-seg sm" role="radiogroup" aria-label="Крок графіка">
-                <button type="button" role="radio" aria-checked={mode === "daily"} className={mode === "daily" ? "on" : ""} onClick={() => setTrendMode("daily")}>По днях</button>
-                <button type="button" role="radio" aria-checked={mode === "weekly"} className={mode === "weekly" ? "on" : ""} onClick={() => setTrendMode("weekly")}>По тижнях</button>
+        {/* ── Д. Динаміка + сигнали за період ── */}
+        <div className="nd-bottom">
+          <section className="nd-card nd-trend" aria-labelledby="nd-trend-title">
+            <div className="nd-card-head">
+              <div>
+                <h3 id="nd-trend-title">Динаміка за період</h3>
+                <p>{span < 7 ? "Для динаміки оберіть щонайменше тиждень" : mode === "daily" ? "по днях" : "по тижнях"}</p>
               </div>
-            )}
-          </div>
-          {span >= 7 && <TrendPanel points={points} loading={trends.isLoading} />}
-        </section>
+              {span >= 7 && (
+                <div className="nd-seg sm" role="radiogroup" aria-label="Крок графіка">
+                  <button type="button" role="radio" aria-checked={mode === "daily"} className={mode === "daily" ? "on" : ""} onClick={() => setTrendMode("daily")}>По днях</button>
+                  <button type="button" role="radio" aria-checked={mode === "weekly"} className={mode === "weekly" ? "on" : ""} onClick={() => setTrendMode("weekly")}>По тижнях</button>
+                </div>
+              )}
+            </div>
+            {span >= 7 && <TrendPanel points={points} loading={trends.isLoading} />}
+          </section>
+          <PeriodSignals report={periodAttention.data} loading={periodAttention.isLoading} onOpen={setPanel} />
+        </div>
 
         {/* ── Детальні звіти ── */}
         <details className="nd-details" open={initial.tab !== null}>
@@ -485,7 +491,8 @@ export function MainBranchPage() {
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
-/** Клікабельний показник: уся картка — кнопка з видимим «Переглянути»; додаткові дії — окремими кнопками поруч. */
+/** Клікабельний показник — колонка спільної панелі: уся колонка — кнопка з постійно видимим
+    «Переглянути по філіях»; додаткові дії (нові діти, невідмічені) — окремими кнопками під нею. */
 function Kpi({ label, value, sub, extra, loading, onOpen }: {
   label: string; value: ReactNode; sub?: ReactNode; extra?: ReactNode; loading: boolean; onOpen: () => void;
 }) {
@@ -493,7 +500,7 @@ function Kpi({ label, value, sub, extra, loading, onOpen }: {
     <div className="nd-kpi">
       <button type="button" className="nd-kpi-main" onClick={onOpen} aria-label={`${label}: переглянути по філіях`}>
         <span className="nd-kpi-label">{label}</span>
-        {loading ? <span className="nd-skel" style={{ width: 120, height: 32 }} /> : <span className="nd-kpi-value">{value}</span>}
+        {loading ? <span className="nd-skel" style={{ width: 120, height: 34 }} /> : <span className="nd-kpi-value">{value}</span>}
         {sub && <span className="nd-kpi-sub">{sub}</span>}
         <span className="nd-kpi-go">Переглянути по філіях →</span>
       </button>
