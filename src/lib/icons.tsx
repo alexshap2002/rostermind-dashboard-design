@@ -192,6 +192,12 @@ export const IconLogout = (p: IconProps) => (
     <path d="M16 17l5-5-5-5M21 12H9" />
   </svg>
 );
+/** Стрілка вгору-праворуч — «відкрити розбивку» на плитках показників. */
+export const IconArrowUpRight = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M7 17L17 7M9 7h8v8" />
+  </svg>
+);
 /** Шестерня — розділ «Налаштування». */
 export const IconSettings = (p: IconProps) => (
   <svg {...base(p)}>
