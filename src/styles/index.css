@@ -1285,19 +1285,27 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
   .teacher-home .t-today { grid-column: 1 / -1; }
 }
 
-/* ── Мережа шкіл (дашборд власника, бриф 19.10.2026) ── */
+/* ── Варіант 2: «Бенто» — дашборд мережі плитками Warm Ink (бриф 19.10.2026) ──
+   Та сама сітка `.bento`/`.tile`, що й на Панелі адміністратора: одна темна hero-плитка з головною
+   метрикою (відвідуваність + динаміка), поруч «На зараз», ряд із 4 KPI, таблиця філій і звіти. */
+:root {
+  --chip-bg: #f3ede1;        /* нейтральний квадрат піктограми, фон тихих чипів */
+  --on-ink: #f4efe7;         /* основний текст на чорнилі */
+  --on-ink-muted: #c2b8a8;   /* підписи на чорнилі (контраст ≈ 9:1) */
+}
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.nd-page { display: flex; flex-direction: column; gap: 16px; }
-.nd-demo { background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 10px 14px; font-size: 13.5px; }
+.nd-page { display: flex; flex-direction: column; gap: 14px; }
+.nd-demo { background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 9px 14px; font-size: 13px; }
 .nd-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 10px 8px 10px 14px; font-size: 14px; }
-.nd-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
 .nd-skel { display: inline-block; height: 18px; border-radius: 6px; background: linear-gradient(90deg, #efe8dc, #f7f2ea, #efe8dc); background-size: 200% 100%; animation: nd-shimmer 1.2s linear infinite; }
+.nd-skel.dark { background: linear-gradient(90deg, var(--ink-2), var(--ink-3), var(--ink-2)); background-size: 200% 100%; }
 @keyframes nd-shimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .nd-skel { animation: none; } }
 .nd-empty { padding: 20px; color: var(--text-3); font-size: 14px; }
+.nd-empty.on-dark { color: var(--on-ink-muted); padding: 24px 0; }
 .nd-muted { color: var(--text-3); font-weight: 500; }
 
-/* Панель контексту */
+/* Панель контексту: період, філії, оновити, експорт */
 .nd-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .nd-spacer { flex: 1; }
 .nd-seg { display: inline-flex; background: #ece5d8; border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
@@ -1305,61 +1313,88 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 .nd-seg button:hover { color: var(--text); background: rgba(255,255,255,.5); }
 .nd-seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(38,32,25,.12); }
 .nd-seg.sm button { font-size: 13px; padding: 6px 12px; min-height: 34px; }
+.nd-seg.dark { background: var(--ink-2); }
+.nd-seg.dark button { color: var(--on-ink-muted); }
+.nd-seg.dark button:hover { color: var(--on-ink); background: var(--ink-3); }
+.nd-seg.dark button.on { background: var(--ink-3); color: var(--on-ink); box-shadow: none; }
 .nd-dates { display: inline-flex; gap: 8px; }
 .nd-dates label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-3); }
 .nd-dates input { font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); min-height: 40px; }
 .nd-dd { position: relative; }
-.nd-dd-btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; min-height: 40px; cursor: pointer; }
+.nd-dd-btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; font-weight: 600; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 8px 14px; min-height: 40px; cursor: pointer; }
 .nd-dd-btn:hover { border-color: #d6cab6; }
+.nd-dd-chev { width: 14px; height: 14px; stroke-width: 2.4; color: var(--text-3); }
 .nd-dd-menu { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 220px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(38,32,25,.14); padding: 6px; }
 .nd-check { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 14px; cursor: pointer; min-height: 40px; }
 .nd-check:hover { background: #f5efe4; }
 .nd-check input { width: 16px; height: 16px; accent-color: var(--terra); }
+.nd-context { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; padding: 0 2px; }
+.nd-context h3 { font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.nd-compare { font-size: 13px; color: var(--text-3); }
 
-/* На зараз */
-.nd-now { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 14px; }
-.nd-now-head { display: flex; flex-direction: column; min-width: 120px; }
-.nd-now-head h3 { font-size: 15px; font-weight: 700; }
-.nd-now-head span { font-size: 12px; color: var(--text-3); }
-.nd-now-items { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; }
-.nd-now-all { font-size: 13px; padding: 8px 4px; }
-.nd-signal { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 42px; text-align: left; cursor: pointer; max-width: 100%; }
-button.nd-signal:hover { border-color: #cfc2ad; background: #efe8dc; }
-.nd-signal svg { width: 16px; height: 16px; }
-.nd-signal b { font-weight: 700; }
-.nd-signal-sub { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
-.nd-signal-go { color: var(--text-3); margin-left: 2px; }
-.nd-signal-tag { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: #ece5d8; color: var(--text-2); }
-.nd-signal.warn .nd-signal-tag { background: var(--warn-soft); color: var(--warn-text); }
-.nd-signal.risk .nd-signal-tag { background: var(--risk-soft); color: var(--risk-text); }
-.nd-signal.info .nd-signal-tag { background: var(--info-soft); color: var(--info-text); }
-.nd-signal.ok { background: var(--ok-soft); color: var(--ok-text); border-color: transparent; cursor: default; font-weight: 600; }
-.nd-signal.wide { width: 100%; }
+/* Сітка плиток */
+.nd-bento .tile { padding: 20px 22px; }
+.nd-bento .tile-head { margin-bottom: 10px; gap: 12px; }
+.nd-bento .tile-head .chip { font-weight: 500; font-size: 12px; text-align: right; }
 
-/* Заголовок секції */
-.nd-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; margin-top: 8px; }
-.nd-section-head h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
-.nd-compare, .nd-hint { font-size: 13px; color: var(--text-3); }
-.nd-aux { font-size: 13px; color: var(--text-3); margin-top: -6px; }
+/* Hero: відвідуваність мережі + динаміка. Єдина темна плитка — головна метрика */
+.nd-hero { grid-column: span 8; background: var(--ink); border-color: var(--ink); color: var(--on-ink); display: grid; grid-template-columns: minmax(200px, 232px) minmax(0, 1fr); gap: 16px 28px; align-items: start; }
+.nd-hero-side { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.nd-hero-label { font-size: 11.5px; font-weight: 700; color: var(--on-ink-muted); text-transform: uppercase; letter-spacing: .08em; }
+.nd-hero-big { font-size: 44px; letter-spacing: -.02em; line-height: 1; color: var(--terra-on); margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+.nd-hero-sub { font-size: 13px; color: var(--on-ink-muted); line-height: 1.4; }
+.nd-hero .nd-delta, .nd-hero .nd-delta.ok, .nd-hero .nd-delta.risk { color: var(--on-ink); }
+.nd-hero-go { align-self: flex-start; justify-self: start; text-align: left; margin-top: 6px; font: inherit; font-size: 13px; font-weight: 700; color: var(--terra-on); background: none; border: none; padding: 8px 0; min-height: 40px; cursor: pointer; }
+.nd-hero-go:hover { text-decoration: underline; }
+.nd-hero-chart { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nd-hero-chart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; min-height: 30px; }
+.nd-hero-caption { font-size: 12.5px; font-weight: 600; color: var(--on-ink-muted); }
+.nd-hero .nd-chart-box { padding: 0; }
+.nd-hero .nd-legend { padding: 2px 0 4px; }
+.nd-hero .nd-table-alt { margin-top: 2px; }
+.nd-hero .nd-table-alt summary { padding: 4px 0; }
+.nd-hero .nd-skel { display: block; }
 
-/* KPI */
-.nd-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.nd-kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); display: flex; flex-direction: column; transition: border-color .15s, background .15s; }
-.nd-kpi:hover { border-color: #cfc2ad; }
-.nd-kpi-main { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 16px 16px 10px; cursor: pointer; border-radius: var(--r-lg); flex: 1; }
-.nd-kpi-label { font-size: 14px; font-weight: 600; color: var(--text-2); }
-.nd-kpi-value { font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.nd-kpi-value small { font-size: 15px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
-.nd-kpi-sub { font-size: 13px; color: var(--text-3); }
-.nd-kpi-go { font-size: 13px; font-weight: 600; color: var(--terra-deep); margin-top: 4px; }
-.nd-kpi-main:hover .nd-kpi-go { text-decoration: underline; }
-.nd-kpi-extra { padding: 0 16px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
-.nd-kpi-chip { font: inherit; font-size: 13px; font-weight: 600; color: var(--ok-text); background: var(--ok-soft); border: none; border-radius: 8px; padding: 6px 10px; min-height: 32px; cursor: pointer; }
+/* На зараз: короткий список сигналів, кожен — перехід до своєї вибірки */
+.nd-now { grid-column: span 4; display: flex; flex-direction: column; }
+.nd-now-list { display: flex; flex-direction: column; flex: 1; }
+.nd-now-list .nd-skel { margin: 10px 0; }
+.nd-now-row { display: flex; align-items: flex-start; gap: 11px; width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: none; border-bottom: 1px solid var(--line); padding: 10px 0; min-height: 50px; cursor: pointer; border-radius: 0; }
+.nd-now-row:last-child { border-bottom: none; }
+.nd-now-row.calm { cursor: default; }
+.nd-now-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.nd-now-text b { font-size: 14px; font-weight: 700; line-height: 1.3; }
+.nd-now-text span { font-size: 12.5px; color: var(--text-3); line-height: 1.35; }
+.nd-now-go { color: var(--text-3); font-size: 15px; margin-left: auto; align-self: center; transition: color .15s, transform .15s; }
+button.nd-now-row:hover .nd-now-go, button.nd-now-row:focus-visible .nd-now-go { color: var(--terra-deep); transform: translateX(2px); }
+button.nd-now-row:hover b { text-decoration: underline; text-decoration-color: #cfc2ad; }
+.nd-now-foot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
+.nd-now-foot .link { font-size: 13px; padding: 8px 0; min-height: 36px; }
+.nd-tag { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; border-radius: 7px; padding: 3px 8px; margin-top: 2px; min-width: 62px; min-height: 22px; white-space: nowrap; background: var(--chip-bg); color: var(--text-2); }
+.nd-tag svg { width: 14px; height: 14px; stroke-width: 2.6; }
+.nd-tag.warn { background: var(--warn-soft); color: var(--warn-text); }
+.nd-tag.risk { background: var(--risk-soft); color: var(--risk-text); }
+.nd-tag.ok { background: var(--ok-soft); color: var(--ok-text); }
+.nd-tag.info { background: var(--info-soft); color: var(--info-text); }
+
+/* KPI: уся плитка — кнопка; піктограма нейтральна, число Unbounded, «Переглянути» завжди видно */
+.nd-bento .nd-kpi { grid-column: span 3; padding: 0; display: flex; flex-direction: column; }
+.nd-kpi-main { display: flex; align-items: flex-start; gap: 14px; width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 18px 20px 14px; cursor: pointer; flex: 1; border-radius: var(--r-lg); }
+.nd-kpi-main:focus-visible { outline-offset: -3px; }
+.nd-kpi-ic { width: 44px; height: 44px; border-radius: 13px; background: var(--chip-bg); color: var(--text-2); }
+.nd-kpi-ic svg { width: 20px; height: 20px; stroke-width: 2; }
+.nd-kpi-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.nd-kpi-value { font-size: 26px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.nd-kpi-value small { font-family: 'Commissioner', sans-serif; font-size: 13.5px; font-weight: 600; color: var(--text-3); letter-spacing: 0; margin-left: 6px; }
+.nd-kpi-sub { font-size: 12.5px; color: var(--text-3); line-height: 1.35; }
+.nd-kpi-go { font-size: 12.5px; font-weight: 700; color: var(--text-3); margin-top: 4px; transition: color .15s; }
+.nd-kpi-main:hover .nd-kpi-go, .nd-kpi-main:focus-visible .nd-kpi-go { color: var(--terra-deep); text-decoration: underline; }
+.nd-kpi-extra { padding: 0 20px 16px 78px; display: flex; flex-wrap: wrap; gap: 6px; }
+.nd-kpi-chip { font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ok-text); background: var(--ok-soft); border: none; border-radius: 8px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
 .nd-kpi-chip:hover { text-decoration: underline; }
-.nd-kpi-status { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* Пігулки статусів */
-.nd-pill { display: inline-flex; align-items: center; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: #ece5d8; color: var(--text-2); border: none; }
+.nd-pill { display: inline-flex; align-items: center; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: var(--chip-bg); color: var(--text-2); border: none; }
 button.nd-pill { cursor: pointer; }
 button.nd-pill:hover { text-decoration: underline; }
 .nd-pill.warn { background: var(--warn-soft); color: var(--warn-text); }
@@ -1372,13 +1407,18 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-delta.risk { color: var(--risk-text); }
 .nd-delta-sfx { font-weight: 500; color: var(--text-3); }
 
-/* Таблиця філій */
+/* Філії — плитка з таблицею порівняння */
+.nd-bento .nd-branches { grid-column: span 12; padding: 0; }
+.nd-branches .tile-head { padding: 18px 22px 10px; margin: 0; }
+.nd-branches .tile-head .chip { max-width: 62%; }
+.nd-branches .nd-aux { padding: 10px 22px 14px; }
+.nd-aux { font-size: 13px; color: var(--text-3); }
 .nd-table-scroll { overflow-x: auto; }
 .nd-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .nd-table th, .nd-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
-.nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; background: #faf6ef; }
-.nd-table thead th:first-child { border-top-left-radius: var(--r-lg); }
-.nd-table thead th:last-child { border-top-right-radius: var(--r-lg); }
+.nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; background: #faf6ef; border-top: 1px solid var(--line); }
+.nd-branches-table th:first-child, .nd-branches-table td:first-child { padding-left: 22px; }
+.nd-branches-table th:last-child, .nd-branches-table td:last-child { padding-right: 22px; }
 .nd-table .r { text-align: right; }
 .nd-table td.r, .nd-table th.r { font-variant-numeric: tabular-nums; }
 .nd-table tbody tr:hover { background: #fbf8f2; }
@@ -1387,6 +1427,7 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-table .th-sort { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-3); background: none; border: none; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; padding: 4px 0; }
 .nd-table .th-sort.on { color: var(--text); }
 .nd-table .r .th-sort { flex-direction: row-reverse; }
+.nd-table thead th .th-arrow { font-size: 10px; }
 .nd-branch-name { font: inherit; font-size: 15px; font-weight: 700; color: var(--text); background: none; border: none; cursor: pointer; text-align: left; display: flex; flex-direction: column; padding: 2px 0; }
 .nd-branch-hint { font-size: 12px; font-weight: 500; color: var(--terra-deep); }
 .nd-branch-name:hover .nd-branch-hint { text-decoration: underline; }
@@ -1399,15 +1440,12 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-calm { color: var(--text-4); }
 .nd-act { text-align: right; white-space: nowrap; }
 
-/* Графік */
-.nd-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; padding: 16px 16px 4px; }
-.nd-card-head h3 { font-size: 16px; font-weight: 700; }
-.nd-card-head p { font-size: 13px; color: var(--text-3); }
+/* Графік динаміки (у hero — темна тема) */
 .nd-chart-box { padding: 4px 16px 14px; position: relative; }
 .nd-chart-hit { position: relative; }
 .nd-chart-hit svg { display: block; overflow: visible; }
-.nd-chart-hit svg + svg { margin-top: 14px; }
-.nd-legend { display: flex; gap: 16px; font-size: 13px; color: var(--text-2); padding: 6px 0 4px; }
+.nd-chart-hit svg + svg { margin-top: 12px; }
+.nd-legend { display: flex; gap: 16px; font-size: 12.5px; color: var(--text-2); padding: 4px 0 6px; }
 .nd-key { display: inline-block; vertical-align: middle; margin-right: 6px; }
 .nd-key.line { width: 18px; height: 3px; border-radius: 2px; background: var(--info-text); }
 .nd-key.bar { width: 10px; height: 12px; border-radius: 2px; background: #c9b9a2; }
@@ -1418,21 +1456,35 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-bar { fill: #c9b9a2; }
 .nd-bar.on { fill: #9f8b70; }
 .nd-cross { stroke: #b9ab96; stroke-dasharray: 3 3; }
-.nd-tip { position: absolute; top: 6px; transform: translateX(-50%); background: var(--ink); color: #f4efe7; border-radius: 10px; padding: 8px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; white-space: nowrap; z-index: 2; }
-.nd-table-alt { margin-top: 10px; font-size: 13px; }
+.nd-tip { position: absolute; top: 6px; transform: translateX(-50%); background: var(--ink); color: var(--on-ink); border-radius: 10px; padding: 8px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; white-space: nowrap; z-index: 2; }
+.nd-table-alt { margin-top: 8px; font-size: 13px; }
 .nd-table-alt summary { cursor: pointer; color: var(--terra-deep); font-weight: 600; padding: 6px 0; }
+.nd-chart-box.dark .nd-legend { color: var(--on-ink-muted); }
+.nd-chart-box.dark .nd-key.line { background: var(--on-ink); }
+.nd-chart-box.dark .nd-key.bar { background: var(--ink-3); outline: 1px solid var(--on-ink-muted); outline-offset: -1px; }
+.nd-chart-box.dark .nd-grid { stroke: var(--ink-3); }
+.nd-chart-box.dark .nd-axis { fill: var(--on-ink-muted); }
+.nd-chart-box.dark .nd-line { stroke: var(--on-ink); }
+.nd-chart-box.dark .nd-dot { fill: var(--on-ink); stroke: var(--ink); }
+.nd-chart-box.dark .nd-bar { fill: var(--ink-3); }
+.nd-chart-box.dark .nd-bar.on { fill: var(--terra-on); }
+.nd-chart-box.dark .nd-cross { stroke: var(--on-ink-muted); }
+.nd-chart-box.dark .nd-tip { background: var(--surface); color: var(--text); box-shadow: 0 6px 16px rgba(38,32,25,.3); }
+.nd-chart-box.dark .nd-table-alt summary { color: var(--terra-on); }
+.nd-chart-box.dark .nd-table th, .nd-chart-box.dark .nd-table td { color: var(--on-ink); border-color: var(--ink-3); background: transparent; }
+.nd-chart-box.dark .nd-table thead th { color: var(--on-ink-muted); }
+.nd-chart-box.dark .nd-table tbody tr:hover { background: var(--ink-2); }
 
 /* Детальні звіти */
-.nd-details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 4px 16px 16px; }
+.nd-bento .nd-details { grid-column: span 12; padding: 4px 22px 16px; }
 .nd-details > summary { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; cursor: pointer; padding: 12px 0; list-style: none; }
 .nd-details > summary::-webkit-details-marker { display: none; }
 .nd-details > summary::before { content: "▸"; color: var(--text-3); transition: transform .15s; }
 .nd-details[open] > summary::before { transform: rotate(90deg); }
-.nd-details > summary h3 { font-size: 16px; font-weight: 700; }
+.nd-details > summary h3 { font-size: 15px; font-weight: 800; }
 .nd-details > summary span { font-size: 13px; color: var(--text-3); }
 .nd-reveal { padding: 10px 14px 4px; }
 .nd-more { font-size: 13.5px; padding: 8px 0; }
-.nd-table thead th .th-arrow { font-size: 10px; }
 
 /* Бічна панель */
 .nd-drawer-wrap { position: fixed; inset: 0; z-index: 80; }
@@ -1464,27 +1516,68 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-mini-label { font-size: 13px; color: var(--text-2); font-weight: 600; }
 .nd-mini-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .nd-mini-sub { font-size: 12.5px; color: var(--text-3); }
+.nd-signal { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 42px; text-align: left; cursor: pointer; max-width: 100%; }
+button.nd-signal:hover { border-color: #cfc2ad; background: #efe8dc; }
+.nd-signal b { font-weight: 700; }
+.nd-signal-go { color: var(--text-3); margin-left: auto; }
+.nd-signal-tag { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: var(--chip-bg); color: var(--text-2); }
+.nd-signal.warn .nd-signal-tag { background: var(--warn-soft); color: var(--warn-text); }
+.nd-signal.wide { width: 100%; }
 .nd-att h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
 .nd-att-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--line); }
 .nd-att-title { font-size: 14px; }
 .nd-att-sub { font-size: 12.5px; color: var(--text-3); }
 .nd-work { align-self: flex-start; min-height: 42px; }
 
-@media (max-width: 1100px) { .nd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) {
-  .nd-kpis { grid-template-columns: 1fr; }
-  .nd-kpi-value { font-size: 28px; }
-  .nd-now { flex-direction: column; align-items: stretch; }
-  .nd-signal { width: 100%; }
-  .nd-spacer { display: none; }
-  /* Таблиця філій → картки з тими самими полями й переходами */
+/* Адаптив: 1140 — 6 колонок (hero і «На зараз» на всю ширину), 760 — KPI по одному, таблиця → картки, 560 — одна колонка */
+@media (max-width: 1140px) {
+  .nd-hero, .nd-now, .nd-bento .nd-branches, .nd-bento .nd-details { grid-column: span 6; }
+  .nd-bento .nd-kpi { grid-column: span 3; }
+}
+@media (max-width: 900px) {
+  .nd-hero { grid-template-columns: 1fr; gap: 12px; }
+  .nd-hero-side { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "label label" "big sub" "go go"; column-gap: 18px; align-items: center; }
+  .nd-hero-label { grid-area: label; }
+  .nd-hero-big { grid-area: big; margin: 2px 0; }
+  .nd-hero-sub { grid-area: sub; }
+  .nd-hero-sub + .nd-hero-sub { grid-area: sub; margin-top: 36px; }
+  .nd-hero-go { grid-area: go; margin-top: 0; }
+}
+@media (max-width: 1320px) { .nd-kpi-extra { padding-left: 20px; } }
+@media (max-width: 900px) {
+  .nd-branches .tile-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .nd-branches .tile-head .chip { max-width: none; text-align: left; }
+  /* Таблиця філій → картки з тими самими полями й переходами: дві в ряд, з 560px — одна */
   .nd-branches .nd-table thead { display: none; }
-  .nd-branches .nd-table, .nd-branches .nd-table tbody, .nd-branches .nd-table tfoot, .nd-branches .nd-table tr { display: block; }
-  .nd-branches .nd-table tr { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .nd-branches .nd-table, .nd-branches .nd-table tfoot, .nd-branches .nd-table tr { display: block; }
+  .nd-branches .nd-table tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; padding: 0 22px; border-top: 1px solid var(--line); }
+  .nd-branches .nd-table tbody tr { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .nd-branches .nd-table tbody tr:hover { background: transparent; }
+  .nd-branches .nd-table tfoot tr { padding: 12px 22px; }
   .nd-branches .nd-table th, .nd-branches .nd-table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: none; padding: 6px 0; text-align: right; }
   .nd-branches .nd-table td::before, .nd-branches .nd-table tfoot th::before { content: attr(data-label); font-size: 13px; color: var(--text-3); text-align: left; }
   .nd-branches .nd-table tbody th { padding-bottom: 8px; }
   .nd-branches .nd-table td:empty { display: none; }
   .nd-branches .nd-act { justify-content: flex-start; }
+  .nd-branches-table th:first-child, .nd-branches-table td:first-child { padding-left: 0; }
+  .nd-branches-table th:last-child, .nd-branches-table td:last-child { padding-right: 0; }
+}
+@media (max-width: 760px) {
+  .nd-bento .nd-kpi { grid-column: span 6; }
+  .nd-hero-big { font-size: 36px; }
+  .nd-spacer { display: none; }
   .nd-mini-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .nd-hero, .nd-now, .nd-bento .nd-kpi, .nd-bento .nd-branches, .nd-bento .nd-details { grid-column: 1 / -1; }
+  .nd-bento .tile { padding: 18px; }
+  .nd-bento .nd-kpi, .nd-bento .nd-branches { padding: 0; }
+  .nd-kpi-main { padding: 16px 18px 12px; }
+  .nd-kpi-extra { padding: 0 18px 14px 76px; }
+  .nd-branches .tile-head { padding: 16px 18px 8px; }
+  .nd-branches .nd-table tbody { grid-template-columns: 1fr; padding: 0 18px; }
+  .nd-branches .nd-table tfoot tr { padding: 12px 18px; }
+  .nd-bento .nd-details { padding: 4px 18px 14px; }
+  .nd-hero-side { display: flex; flex-direction: column; align-items: flex-start; }
+  .nd-hero-sub + .nd-hero-sub { margin-top: 0; }
 }

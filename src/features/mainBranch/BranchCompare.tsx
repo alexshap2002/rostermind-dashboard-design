@@ -28,9 +28,8 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
   );
 
   return (
-    <div className="nd-card nd-branches">
-      <div className="nd-table-scroll">
-        <table className="nd-table">
+    <div className="nd-table-scroll">
+        <table className="nd-table nd-branches-table">
           <caption className="sr-only">Порівняння філій за обраний період</caption>
           <thead>
             <tr>
@@ -126,7 +125,6 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
             </tfoot>
           )}
         </table>
-      </div>
     </div>
   );
 }

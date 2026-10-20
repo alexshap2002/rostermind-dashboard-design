@@ -16,8 +16,11 @@ const PAD_L = 40;
 const PAD_R = 12;
 
 /** Динаміка мережі: відвідуваність (шкала 0–100 %) і кількість проведених занять (своя шкала) —
-    два компактні графіки зі спільною віссю дат і спільною підказкою; під ними — таблиця для читачів екрана. */
-export function TrendPanel({ points, loading }: { points: TrendPoint[]; loading: boolean }) {
+    два компактні графіки зі спільною віссю дат і спільною підказкою; під ними — таблиця для читачів екрана.
+    `dark` — тема для темної hero-плитки; `compact` — нижчі графіки, щоб плитка вміщалась у перший екран. */
+export function TrendPanel({ points, loading, dark = false, compact = false }: {
+  points: TrendPoint[]; loading: boolean; dark?: boolean; compact?: boolean;
+}) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(720);
   const [hover, setHover] = useState<number | null>(null);
@@ -34,8 +37,8 @@ export function TrendPanel({ points, loading }: { points: TrendPoint[]; loading:
   const n = points.length;
   const innerW = width - PAD_L - PAD_R;
   const x = (i: number) => PAD_L + (n <= 1 ? innerW / 2 : (i * innerW) / (n - 1));
-  const rateH = 150;
-  const barsH = 78;
+  const rateH = compact ? 96 : 150;
+  const barsH = compact ? 46 : 78;
   const yRate = (v: number) => 8 + (1 - v / 100) * (rateH - 16);
   const maxLessons = Math.max(1, ...points.map((p) => p.lessons));
   const niceMax = maxLessons <= 5 ? 5 : Math.ceil(maxLessons / 5) * 5;
@@ -60,12 +63,13 @@ export function TrendPanel({ points, loading }: { points: TrendPoint[]; loading:
     setHover(Math.max(0, Math.min(n - 1, i)));
   };
   const h = hover !== null ? points[hover] : null;
+  const cls = `nd-chart-box${dark ? " dark" : ""}`;
 
-  if (loading) return <div className="nd-chart-box"><span className="nd-skel" style={{ width: "100%", height: 230 }} /></div>;
-  if (n === 0) return <div className="nd-empty">За період немає даних</div>;
+  if (loading) return <div className={cls}><span className="nd-skel" style={{ width: "100%", height: rateH + barsH + 40 }} /></div>;
+  if (n === 0) return <div className={`nd-empty${dark ? " on-dark" : ""}`}>За період немає даних</div>;
 
   return (
-    <div className="nd-chart-box" ref={boxRef}>
+    <div className={cls} ref={boxRef}>
       <div className="nd-legend" aria-hidden="true">
         <span><i className="nd-key line" /> Відвідуваність, %</span>
         <span><i className="nd-key bar" /> Проведено занять</span>
