@@ -1285,69 +1285,81 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
   .teacher-home .t-today { grid-column: 1 / -1; }
 }
 
-/* ── Мережа шкіл (дашборд власника, бриф 19.10.2026) ── */
+/* ── Варіант 4: Консоль — дашборд мережі з бічною панеллю (бриф 19.10.2026) ──
+   Ліворуч панель керування (період, філії, «На зараз», оновлення), праворуч робоча зона:
+   показники → таблиця філій → динаміка → детальні звіти. На вузькому екрані панель стає
+   рядками чипів над робочою зоною. */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.nd-page { display: flex; flex-direction: column; gap: 16px; }
-.nd-demo { background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 10px 14px; font-size: 13.5px; }
+.nd-page { display: flex; flex-direction: column; gap: 14px; }
+.nd-demo { background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 9px 14px; font-size: 13px; }
 .nd-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 10px 8px 10px 14px; font-size: 14px; }
-.nd-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.nd-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 .nd-skel { display: inline-block; height: 18px; border-radius: 6px; background: linear-gradient(90deg, #efe8dc, #f7f2ea, #efe8dc); background-size: 200% 100%; animation: nd-shimmer 1.2s linear infinite; }
 @keyframes nd-shimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .nd-skel { animation: none; } }
 .nd-empty { padding: 20px; color: var(--text-3); font-size: 14px; }
 .nd-muted { color: var(--text-3); font-weight: 500; }
 
-/* Панель контексту */
-.nd-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.nd-spacer { flex: 1; }
-.nd-seg { display: inline-flex; background: #ece5d8; border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
-.nd-seg button { border: none; background: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--text-2); padding: 8px 14px; min-height: 38px; border-radius: 8px; cursor: pointer; }
-.nd-seg button:hover { color: var(--text); background: rgba(255,255,255,.5); }
-.nd-seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(38,32,25,.12); }
-.nd-seg.sm button { font-size: 13px; padding: 6px 12px; min-height: 34px; }
-.nd-dates { display: inline-flex; gap: 8px; }
-.nd-dates label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-3); }
-.nd-dates input { font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); min-height: 40px; }
-.nd-dd { position: relative; }
-.nd-dd-btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; min-height: 40px; cursor: pointer; }
-.nd-dd-btn:hover { border-color: #d6cab6; }
-.nd-dd-menu { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 220px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(38,32,25,.14); padding: 6px; }
-.nd-check { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 14px; cursor: pointer; min-height: 40px; }
+/* Дві колонки: панель керування + робоча зона */
+.nd-console { display: grid; grid-template-columns: 272px minmax(0, 1fr); gap: 20px; align-items: start; }
+.nd-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* Бічна панель */
+.nd-side { position: sticky; top: 78px; max-height: calc(100vh - 94px); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; }
+.nd-side-block { padding: 10px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.nd-side-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); padding: 2px 10px 6px; }
+.nd-side-title span { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 12.5px; }
+.nd-radios { display: flex; flex-direction: column; gap: 2px; }
+.nd-radio { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; font: inherit; font-size: 14px; font-weight: 600; color: var(--text-2); background: none; border: none; border-radius: 8px; padding: 0 10px; min-height: 36px; cursor: pointer; text-align: left; }
+.nd-radio:hover { background: #f5efe4; color: var(--text); }
+.nd-radio.on { background: var(--terra-soft); color: var(--terra-deep); }
+.nd-radio-sub { font-size: 12.5px; font-weight: 500; color: var(--text-3); white-space: nowrap; }
+.nd-radio.on .nd-radio-sub { color: var(--terra-deep); }
+.nd-dates { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 4px; }
+.nd-dates label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--text-3); }
+.nd-dates input { font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); min-height: 40px; flex: 1; min-width: 0; }
+.nd-checks { display: flex; flex-direction: column; gap: 2px; }
+.nd-check { display: flex; align-items: center; gap: 10px; padding: 0 10px; min-height: 36px; border-radius: 8px; font-size: 14px; cursor: pointer; }
 .nd-check:hover { background: #f5efe4; }
-.nd-check input { width: 16px; height: 16px; accent-color: var(--terra); }
+.nd-check input { width: 16px; height: 16px; accent-color: var(--terra); flex-shrink: 0; margin: 0; }
+.nd-check-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.nd-check-meta { font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.nd-badge { font-size: 11.5px; font-weight: 700; border-radius: 99px; padding: 2px 8px; white-space: nowrap; background: #ece5d8; color: var(--text-2); }
+.nd-badge.warn { background: var(--warn-soft); color: var(--warn-text); }
 
-/* На зараз */
-.nd-now { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 14px; }
-.nd-now-head { display: flex; flex-direction: column; min-width: 120px; }
-.nd-now-head h3 { font-size: 15px; font-weight: 700; }
-.nd-now-head span { font-size: 12px; color: var(--text-3); }
-.nd-now-items { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; }
-.nd-now-all { font-size: 13px; padding: 8px 4px; }
-.nd-signal { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 42px; text-align: left; cursor: pointer; max-width: 100%; }
-button.nd-signal:hover { border-color: #cfc2ad; background: #efe8dc; }
-.nd-signal svg { width: 16px; height: 16px; }
-.nd-signal b { font-weight: 700; }
-.nd-signal-sub { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
-.nd-signal-go { color: var(--text-3); margin-left: 2px; }
-.nd-signal-tag { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: #ece5d8; color: var(--text-2); }
-.nd-signal.warn .nd-signal-tag { background: var(--warn-soft); color: var(--warn-text); }
-.nd-signal.risk .nd-signal-tag { background: var(--risk-soft); color: var(--risk-text); }
-.nd-signal.info .nd-signal-tag { background: var(--info-soft); color: var(--info-text); }
-.nd-signal.ok { background: var(--ok-soft); color: var(--ok-text); border-color: transparent; cursor: default; font-weight: 600; }
-.nd-signal.wide { width: 100%; }
+/* Сигнали «На зараз» у панелі: крапка + заголовок + рівень словами */
+.nd-sigs { display: flex; flex-direction: column; gap: 2px; }
+.nd-sig { display: flex; align-items: flex-start; gap: 10px; width: 100%; font: inherit; text-align: left; color: var(--text); background: none; border: none; border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+button.nd-sig:hover { background: #f5efe4; }
+.nd-sig-dot { width: 9px; height: 9px; border-radius: 99px; margin-top: 6px; flex-shrink: 0; background: var(--text-4); }
+.nd-sig.warn .nd-sig-dot { background: var(--gold); }
+.nd-sig.risk .nd-sig-dot { background: var(--crimson); }
+.nd-sig.info .nd-sig-dot { background: var(--navy); }
+.nd-sig-ic { width: 16px; height: 16px; stroke-width: 2.2; color: var(--ok-text); margin-top: 2px; }
+.nd-sig-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; font-size: 13.5px; line-height: 1.35; }
+.nd-sig-body b { font-weight: 700; }
+.nd-sig-body span { font-size: 12.5px; color: var(--text-3); }
+.nd-sig-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nd-sig.ok { cursor: default; color: var(--ok-text); }
+.nd-sig-go { color: var(--text-3); margin-top: 1px; }
+.nd-now-all { font-size: 13px; padding: 8px 10px; text-align: left; }
+.nd-side-foot { padding: 12px 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.nd-updated { width: 100%; font-size: 12.5px; color: var(--text-3); padding: 2px 2px 0; }
 
-/* Заголовок секції */
-.nd-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; margin-top: 8px; }
+/* Заголовки секцій робочої зони */
+.nd-main-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; }
+.nd-main-head h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.nd-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; margin-top: 6px; }
 .nd-section-head h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
 .nd-compare, .nd-hint { font-size: 13px; color: var(--text-3); }
-.nd-aux { font-size: 13px; color: var(--text-3); margin-top: -6px; }
+.nd-aux { font-size: 13px; color: var(--text-3); margin-top: -4px; }
 
-/* KPI */
+/* KPI: уся картка — кнопка з видимим «Переглянути» */
 .nd-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.nd-kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); display: flex; flex-direction: column; transition: border-color .15s, background .15s; }
-.nd-kpi:hover { border-color: #cfc2ad; }
-.nd-kpi-main { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 16px 16px 10px; cursor: pointer; border-radius: var(--r-lg); flex: 1; }
-.nd-kpi-label { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.nd-kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; transition: border-color .15s, box-shadow .15s; }
+.nd-kpi:hover { border-color: #cfc2ad; box-shadow: var(--shadow-hover); }
+.nd-kpi-main { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 16px 16px 10px; cursor: pointer; border-radius: 12px; flex: 1; }
+.nd-kpi-label { font-size: 13px; font-weight: 600; color: var(--text-2); }
 .nd-kpi-value { font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .nd-kpi-value small { font-size: 15px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
 .nd-kpi-sub { font-size: 13px; color: var(--text-3); }
@@ -1373,12 +1385,12 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-delta-sfx { font-weight: 500; color: var(--text-3); }
 
 /* Таблиця філій */
-.nd-table-scroll { overflow-x: auto; }
+.nd-table-scroll { overflow-x: auto; position: relative; }
 .nd-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.nd-table th, .nd-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.nd-table th, .nd-table td { padding: 12px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 .nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; background: #faf6ef; }
-.nd-table thead th:first-child { border-top-left-radius: var(--r-lg); }
-.nd-table thead th:last-child { border-top-right-radius: var(--r-lg); }
+.nd-table thead th:first-child { border-top-left-radius: 12px; }
+.nd-table thead th:last-child { border-top-right-radius: 12px; }
 .nd-table .r { text-align: right; }
 .nd-table td.r, .nd-table th.r { font-variant-numeric: tabular-nums; }
 .nd-table tbody tr:hover { background: #fbf8f2; }
@@ -1387,6 +1399,7 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-table .th-sort { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-3); background: none; border: none; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; padding: 4px 0; }
 .nd-table .th-sort.on { color: var(--text); }
 .nd-table .r .th-sort { flex-direction: row-reverse; }
+.nd-table thead th .th-arrow { font-size: 10px; }
 .nd-branch-name { font: inherit; font-size: 15px; font-weight: 700; color: var(--text); background: none; border: none; cursor: pointer; text-align: left; display: flex; flex-direction: column; padding: 2px 0; }
 .nd-branch-hint { font-size: 12px; font-weight: 500; color: var(--terra-deep); }
 .nd-branch-name:hover .nd-branch-hint { text-decoration: underline; }
@@ -1400,6 +1413,10 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-act { text-align: right; white-space: nowrap; }
 
 /* Графік */
+.nd-seg { display: inline-flex; background: #ece5d8; border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.nd-seg button { border: none; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--text-2); padding: 6px 12px; min-height: 34px; border-radius: 8px; cursor: pointer; }
+.nd-seg button:hover { color: var(--text); background: rgba(255,255,255,.5); }
+.nd-seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(38,32,25,.12); }
 .nd-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; padding: 16px 16px 4px; }
 .nd-card-head h3 { font-size: 16px; font-weight: 700; }
 .nd-card-head p { font-size: 13px; color: var(--text-3); }
@@ -1423,7 +1440,7 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-table-alt summary { cursor: pointer; color: var(--terra-deep); font-weight: 600; padding: 6px 0; }
 
 /* Детальні звіти */
-.nd-details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 4px 16px 16px; }
+.nd-details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px 16px 16px; }
 .nd-details > summary { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; cursor: pointer; padding: 12px 0; list-style: none; }
 .nd-details > summary::-webkit-details-marker { display: none; }
 .nd-details > summary::before { content: "▸"; color: var(--text-3); transition: transform .15s; }
@@ -1432,9 +1449,8 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-details > summary span { font-size: 13px; color: var(--text-3); }
 .nd-reveal { padding: 10px 14px 4px; }
 .nd-more { font-size: 13.5px; padding: 8px 0; }
-.nd-table thead th .th-arrow { font-size: 10px; }
 
-/* Бічна панель */
+/* Бічна панель показника */
 .nd-drawer-wrap { position: fixed; inset: 0; z-index: 80; }
 .nd-scrim { position: absolute; inset: 0; background: rgba(38,32,25,.32); border: none; cursor: default; }
 .nd-drawer { position: absolute; top: 0; right: 0; height: 100%; width: min(560px, 100%); background: var(--surface); box-shadow: -8px 0 32px rgba(38,32,25,.18); display: flex; flex-direction: column; animation: nd-slide .2s ease-out; }
@@ -1469,14 +1485,44 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-att-title { font-size: 14px; }
 .nd-att-sub { font-size: 12.5px; color: var(--text-3); }
 .nd-work { align-self: flex-start; min-height: 42px; }
+/* Сигнал на всю ширину в огляді філії (панель показника) */
+.nd-signal { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 42px; text-align: left; cursor: pointer; max-width: 100%; }
+button.nd-signal:hover { border-color: #cfc2ad; background: #efe8dc; }
+.nd-signal b { font-weight: 700; }
+.nd-signal-go { color: var(--text-3); margin-left: 2px; }
+.nd-signal-tag { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: #ece5d8; color: var(--text-2); }
+.nd-signal.warn .nd-signal-tag { background: var(--warn-soft); color: var(--warn-text); }
+.nd-signal.wide { width: 100%; }
 
-@media (max-width: 1100px) { .nd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) {
-  .nd-kpis { grid-template-columns: 1fr; }
-  .nd-kpi-value { font-size: 28px; }
-  .nd-now { flex-direction: column; align-items: stretch; }
-  .nd-signal { width: 100%; }
-  .nd-spacer { display: none; }
+/* Планшет: таблиця тісніша, щоб 8 колонок уміщались поруч із панеллю */
+@media (max-width: 1320px) {
+  .nd-table th, .nd-table td { padding: 11px 10px; font-size: 13.5px; }
+  .nd-act .btn { padding: 8px 12px; }
+}
+/* Вузький екран: панель над робочою зоною, блоки — рядки чипів */
+@media (max-width: 1000px) {
+  .nd-console { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .nd-side { position: static; max-height: none; overflow: visible; }
+  .nd-side-block { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; }
+  .nd-side-title { width: 100%; padding: 2px 2px 4px; }
+  .nd-radios, .nd-checks, .nd-sigs { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .nd-radio { width: auto; min-height: 36px; padding: 0 14px; border-radius: 99px; background: #ece5d8; font-size: 13.5px; }
+  .nd-radio-sub { display: none; }
+  .nd-dates { flex-direction: row; width: 100%; padding: 4px 0 0; }
+  .nd-dates label { flex: 1; }
+  .nd-check { min-height: 36px; padding: 0 12px 0 10px; border: 1px solid var(--line); border-radius: 99px; gap: 8px; }
+  .nd-check-name { flex: none; }
+  .nd-sig { width: auto; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; align-items: center; }
+  .nd-sig-dot { margin-top: 0; }
+  .nd-sig-body { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 0 6px; }
+  .nd-sig.ok { border-color: transparent; background: var(--ok-soft); }
+  .nd-sig-clamp { display: inline; }
+  .nd-now-all { padding: 6px 4px; }
+  .nd-side-foot { padding: 10px 12px; }
+  .nd-updated { width: auto; margin-left: auto; }
+  .nd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 820px) {
   /* Таблиця філій → картки з тими самими полями й переходами */
   .nd-branches .nd-table thead { display: none; }
   .nd-branches .nd-table, .nd-branches .nd-table tbody, .nd-branches .nd-table tfoot, .nd-branches .nd-table tr { display: block; }
@@ -1486,5 +1532,11 @@ button.nd-pill:hover { text-decoration: underline; }
   .nd-branches .nd-table tbody th { padding-bottom: 8px; }
   .nd-branches .nd-table td:empty { display: none; }
   .nd-branches .nd-act { justify-content: flex-start; }
+}
+@media (max-width: 560px) {
+  .nd-kpis { grid-template-columns: 1fr; }
+  .nd-kpi-value { font-size: 28px; }
   .nd-mini-grid { grid-template-columns: 1fr; }
+  .nd-updated { width: 100%; margin-left: 0; }
+  .nd-sig-clamp { display: inline; }
 }
