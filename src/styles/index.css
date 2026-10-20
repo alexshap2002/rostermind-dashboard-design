@@ -1285,10 +1285,16 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
   .teacher-home .t-today { grid-column: 1 / -1; }
 }
 
-/* ── Мережа шкіл (дашборд власника, бриф 19.10.2026) ── */
+/* ── Варіант 5: Брифінг (дашборд мережі як короткий звіт: лід-речення з числами, список дій, стрічка показників, порівняння зі смужками) ── */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.nd-page { display: flex; flex-direction: column; gap: 16px; }
-.nd-demo { background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 10px 14px; font-size: 13.5px; }
+/* Вужчий контейнер — як у звіту: рядок тексту не довший за ~95 знаків */
+.content.nd-brief { max-width: 1208px; padding-top: 22px; }
+.nd-page {
+  display: flex; flex-direction: column; gap: 24px;
+  /* Смужки порівняння: тепла нейтральна шкала, без «другого акценту» */
+  --meter-track: #ece5d8; --meter-fill: #c9b99f;
+}
+.nd-demo { font-size: 13px; color: var(--info-text); background: var(--info-soft); border-radius: 8px; padding: 8px 12px; align-self: flex-start; }
 .nd-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 10px 8px 10px 14px; font-size: 14px; }
 .nd-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
 .nd-skel { display: inline-block; height: 18px; border-radius: 6px; background: linear-gradient(90deg, #efe8dc, #f7f2ea, #efe8dc); background-size: 200% 100%; animation: nd-shimmer 1.2s linear infinite; }
@@ -1296,10 +1302,22 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 @media (prefers-reduced-motion: reduce) { .nd-skel { animation: none; } }
 .nd-empty { padding: 20px; color: var(--text-3); font-size: 14px; }
 .nd-muted { color: var(--text-3); font-weight: 500; }
+.nd-aux { font-size: 13px; color: var(--text-3); }
+.nd-sec { display: flex; flex-direction: column; gap: 12px; }
 
-/* Панель контексту */
+/* Кнопки брифу: тихі, 40px, не перетворюються на іконку на телефоні */
+.nd-btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0 14px; min-height: 40px; cursor: pointer; white-space: nowrap; }
+.nd-btn:hover { background: #f5efe4; color: var(--text); border-color: #d6cab6; }
+.nd-btn:disabled { color: var(--text-4); cursor: default; }
+.nd-btn svg { width: 15px; height: 15px; stroke-width: 2.2; }
+
+/* Шапка брифу: кікер → період і філії → лід-речення */
+.nd-head { display: flex; flex-direction: column; gap: 16px; }
+.nd-kicker-row { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; }
+.nd-kicker { font-size: 13px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-2); }
+.nd-kicker-meta { font-size: 13px; color: var(--text-3); }
+.nd-head-actions { margin-left: auto; display: flex; gap: 8px; }
 .nd-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.nd-spacer { flex: 1; }
 .nd-seg { display: inline-flex; background: #ece5d8; border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
 .nd-seg button { border: none; background: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--text-2); padding: 8px 14px; min-height: 38px; border-radius: 8px; cursor: pointer; }
 .nd-seg button:hover { color: var(--text); background: rgba(255,255,255,.5); }
@@ -1316,47 +1334,70 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 .nd-check:hover { background: #f5efe4; }
 .nd-check input { width: 16px; height: 16px; accent-color: var(--terra); }
 
-/* На зараз */
-.nd-now { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 14px; }
-.nd-now-head { display: flex; flex-direction: column; min-width: 120px; }
-.nd-now-head h3 { font-size: 15px; font-weight: 700; }
-.nd-now-head span { font-size: 12px; color: var(--text-3); }
-.nd-now-items { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; }
-.nd-now-all { font-size: 13px; padding: 8px 4px; }
-.nd-signal { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 42px; text-align: left; cursor: pointer; max-width: 100%; }
-button.nd-signal:hover { border-color: #cfc2ad; background: #efe8dc; }
-.nd-signal svg { width: 16px; height: 16px; }
-.nd-signal b { font-weight: 700; }
-.nd-signal-sub { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
-.nd-signal-go { color: var(--text-3); margin-left: 2px; }
-.nd-signal-tag { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: #ece5d8; color: var(--text-2); }
-.nd-signal.warn .nd-signal-tag { background: var(--warn-soft); color: var(--warn-text); }
-.nd-signal.risk .nd-signal-tag { background: var(--risk-soft); color: var(--risk-text); }
-.nd-signal.info .nd-signal-tag { background: var(--info-soft); color: var(--info-text); }
-.nd-signal.ok { background: var(--ok-soft); color: var(--ok-text); border-color: transparent; cursor: default; font-weight: 600; }
-.nd-signal.wide { width: 100%; }
+/* Лід: одне речення з головними числами; числа — кнопки з пунктирним підкресленням */
+.nd-lead { font-size: 25px; font-weight: 600; line-height: 1.4; letter-spacing: -.012em; max-width: 1020px; text-wrap: pretty; }
+.nd-lead-num { font: inherit; color: var(--terra-deep); background: none; border: none; padding: 0 1px; cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums; text-decoration: underline; text-decoration-style: dotted; text-decoration-thickness: 2px; text-decoration-color: #d9a78f; text-underline-offset: 6px; border-radius: 4px; }
+.nd-lead-num:hover { color: var(--terra); text-decoration-style: solid; text-decoration-color: var(--terra); }
+.nd-lead-skel { display: flex; flex-direction: column; gap: 10px; }
+.nd-lead-meta { font-size: 13.5px; color: var(--text-3); margin-top: -6px; }
 
 /* Заголовок секції */
-.nd-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; margin-top: 8px; }
-.nd-section-head h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
-.nd-compare, .nd-hint { font-size: 13px; color: var(--text-3); }
-.nd-aux { font-size: 13px; color: var(--text-3); margin-top: -6px; }
+.nd-sec-head { display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; }
+.nd-sec-head h2 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.nd-sec-head span { font-size: 13px; color: var(--text-3); }
+.nd-sec-link { margin-left: auto; font-size: 13.5px; padding: 4px 0; }
 
-/* KPI */
-.nd-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.nd-kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); display: flex; flex-direction: column; transition: border-color .15s, background .15s; }
-.nd-kpi:hover { border-color: #cfc2ad; }
-.nd-kpi-main { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 16px 16px 10px; cursor: pointer; border-radius: var(--r-lg); flex: 1; }
-.nd-kpi-label { font-size: 14px; font-weight: 600; color: var(--text-2); }
-.nd-kpi-value { font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.nd-kpi-value small { font-size: 15px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
-.nd-kpi-sub { font-size: 13px; color: var(--text-3); }
-.nd-kpi-go { font-size: 13px; font-weight: 600; color: var(--terra-deep); margin-top: 4px; }
-.nd-kpi-main:hover .nd-kpi-go { text-decoration: underline; }
-.nd-kpi-extra { padding: 0 16px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
-.nd-kpi-chip { font: inherit; font-size: 13px; font-weight: 600; color: var(--ok-text); background: var(--ok-soft); border: none; border-radius: 8px; padding: 6px 10px; min-height: 32px; cursor: pointer; }
-.nd-kpi-chip:hover { text-decoration: underline; }
-.nd-kpi-status { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Потребує дії зараз: нумерований список рядків-кнопок */
+.nd-act { display: flex; flex-direction: column; gap: 12px; }
+.nd-act-list { list-style: none; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.nd-act-list > li + li { border-top: 1px solid var(--line); }
+.nd-act-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 11px 16px; font: inherit; font-size: 15px; color: var(--text); background: none; border: none; text-align: left; cursor: pointer; }
+.nd-act-row:hover { background: #fbf8f2; }
+.nd-act-row:hover .nd-act-go { color: var(--terra-deep); transform: translateX(2px); }
+.nd-act-n { width: 18px; flex-shrink: 0; font-size: 13px; font-weight: 700; color: var(--text-4); font-variant-numeric: tabular-nums; }
+.nd-act-ic { width: 18px; flex-shrink: 0; color: var(--ok-text); display: inline-flex; }
+.nd-act-ic svg { width: 18px; height: 18px; stroke-width: 2.4; }
+.nd-act-text { flex: 1; min-width: 0; line-height: 1.4; }
+.nd-act-text b { font-weight: 700; }
+.nd-act-sub { color: var(--text-2); }
+.nd-act-go { color: var(--text-3); flex-shrink: 0; transition: transform .15s, color .15s; }
+.nd-act-row.ok { background: var(--ok-soft); color: var(--ok-text); }
+.nd-act-row.ok .nd-act-sub { color: var(--ok-text); }
+.nd-act-row.ok:hover { background: #e1eadb; }
+.nd-tag { flex-shrink: 0; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 3px 8px; background: #ece5d8; color: var(--text-2); white-space: nowrap; }
+.nd-tag.warn { background: var(--warn-soft); color: var(--warn-text); }
+.nd-tag.risk { background: var(--risk-soft); color: var(--risk-text); }
+.nd-tag.info { background: var(--info-soft); color: var(--info-text); }
+
+/* Стрічка показників: 4 колонки з hairline-розділювачами, під числом — міні-графік */
+.nd-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.nd-metric { display: flex; flex-direction: column; min-width: 0; }
+.nd-metric + .nd-metric { border-left: 1px solid var(--line); }
+.nd-metric-main { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 18px 20px 6px; cursor: pointer; flex: 1; width: 100%; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.nd-metric-main:hover { background: #fbf8f2; }
+.nd-metric-main:hover .nd-metric-go { color: var(--terra); text-decoration: underline; }
+.nd-metric-label { font-size: 13.5px; font-weight: 600; color: var(--text-2); }
+.nd-metric-value { font-size: 34px; letter-spacing: -.02em; line-height: 1.05; margin-top: 2px; color: var(--text); }
+.nd-metric-value small { font-family: 'Commissioner', sans-serif; font-size: 15px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
+.nd-metric-sub { font-size: 13px; color: var(--text-3); line-height: 1.4; min-height: 18px; }
+.nd-warn-text { color: var(--warn-text); font-weight: 700; }
+.nd-metric-go { font-size: 13px; font-weight: 600; color: var(--terra-deep); margin-top: auto; padding-top: 6px; }
+.nd-metric-foot { padding: 4px 20px 16px; min-height: 52px; display: flex; align-items: flex-end; }
+.nd-spark { width: 100%; height: 32px; display: block; overflow: visible; }
+.nd-spark-line { fill: none; stroke: var(--info-text); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.nd-spark-dot { fill: var(--info-text); }
+.nd-spark-bar { fill: var(--meter-fill); }
+.nd-spark-base { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.nd-spark-empty { font-size: 12.5px; color: var(--text-4); }
+.nd-chip-new { font: inherit; font-size: 13px; font-weight: 600; color: var(--text-2); background: #f3ede1; border: none; border-radius: 8px; padding: 7px 10px; min-height: 32px; cursor: pointer; text-align: left; }
+.nd-chip-new.on { color: var(--ok-text); background: var(--ok-soft); }
+.nd-chip-new:hover { text-decoration: underline; }
+
+/* Зміни: стрілка й текст, не лише колір */
+.nd-delta { font-size: 13px; font-weight: 600; color: var(--text-3); white-space: nowrap; }
+.nd-delta.ok { color: var(--ok-text); }
+.nd-delta.risk { color: var(--risk-text); }
+.nd-delta-sfx { font-weight: 500; color: var(--text-3); }
 
 /* Пігулки статусів */
 .nd-pill { display: inline-flex; align-items: center; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: #ece5d8; color: var(--text-2); border: none; }
@@ -1366,42 +1407,52 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-pill.risk { background: var(--risk-soft); color: var(--risk-text); }
 .nd-pill.ok { background: var(--ok-soft); color: var(--ok-text); }
 
-/* Зміни: стрілка й текст, не лише колір */
-.nd-delta { font-size: 13px; font-weight: 600; color: var(--text-3); white-space: nowrap; }
-.nd-delta.ok { color: var(--ok-text); }
-.nd-delta.risk { color: var(--risk-text); }
-.nd-delta-sfx { font-weight: 500; color: var(--text-3); }
-
-/* Таблиця філій */
+/* Таблиці (порівняння філій і бічна панель) */
 .nd-table-scroll { overflow-x: auto; }
 .nd-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .nd-table th, .nd-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
-.nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; background: #faf6ef; }
-.nd-table thead th:first-child { border-top-left-radius: var(--r-lg); }
-.nd-table thead th:last-child { border-top-right-radius: var(--r-lg); }
+.nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; }
 .nd-table .r { text-align: right; }
 .nd-table td.r, .nd-table th.r { font-variant-numeric: tabular-nums; }
 .nd-table tbody tr:hover { background: #fbf8f2; }
-.nd-table tfoot th, .nd-table tfoot td, .nd-table .nd-total th, .nd-table .nd-total td { font-weight: 700; background: #faf6ef; border-bottom: none; }
+.nd-table tfoot th, .nd-table tfoot td, .nd-table .nd-total th, .nd-table .nd-total td { font-weight: 700; border-bottom: none; border-top: 2px solid #ddd3c2; background: #faf6ef; }
 .nd-table.compact th, .nd-table.compact td { padding: 9px 10px; font-size: 13.5px; }
 .nd-table .th-sort { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-3); background: none; border: none; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; padding: 4px 0; }
 .nd-table .th-sort.on { color: var(--text); }
+.nd-table .th-sort:hover { color: var(--text); }
 .nd-table .r .th-sort { flex-direction: row-reverse; }
-.nd-branch-name { font: inherit; font-size: 15px; font-weight: 700; color: var(--text); background: none; border: none; cursor: pointer; text-align: left; display: flex; flex-direction: column; padding: 2px 0; }
-.nd-branch-hint { font-size: 12px; font-weight: 500; color: var(--terra-deep); }
-.nd-branch-name:hover .nd-branch-hint { text-decoration: underline; }
+.nd-table thead th .th-arrow { font-size: 10px; }
+.nd-table.compact thead th { background: #faf6ef; }
 .nd-cell { font: inherit; color: inherit; background: none; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; margin: -6px -8px; cursor: pointer; text-align: inherit; font-variant-numeric: tabular-nums; }
 .nd-cell:hover { border-color: var(--line); background: var(--surface); text-decoration: underline; text-decoration-color: #cfc2ad; }
 .nd-cell.warn { color: var(--warn-text); font-weight: 700; }
 .nd-stack { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .nd-of { color: var(--text-3); font-weight: 500; }
 .nd-signals { display: flex; flex-wrap: wrap; gap: 6px; }
-.nd-calm { color: var(--text-4); }
-.nd-act { text-align: right; white-space: nowrap; }
+.nd-calm { color: var(--text-4); font-size: 13px; }
+
+/* Порівняння філій: вертикальний ритм рядків, смужки під числами */
+.nd-compare th, .nd-compare td { padding: 14px 14px; vertical-align: top; }
+.nd-compare thead th { padding-top: 12px; padding-bottom: 8px; }
+.nd-compare tbody .nd-cell { display: block; width: calc(100% + 16px); text-align: left; padding: 6px 8px; }
+.nd-compare tbody .nd-cell b { font-size: 15px; font-weight: 700; }
+.nd-compare tbody .nd-cell .nd-delta { font-size: 12.5px; margin-left: 2px; }
+.nd-meter { display: block; height: 4px; width: 100%; max-width: 128px; margin-top: 7px; background: var(--meter-track); border-radius: 2px; overflow: hidden; }
+.nd-meter i { display: block; height: 100%; background: var(--meter-fill); border-radius: 2px; }
+.nd-meter.att i { background: var(--info-text); }
+.nd-compare tbody th { width: 232px; }
+.nd-branch { display: flex; flex-direction: column; gap: 4px; }
+.nd-branch-name { font: inherit; font-size: 15.5px; font-weight: 700; color: var(--text); background: none; border: none; padding: 0; cursor: pointer; text-align: left; align-self: flex-start; }
+.nd-branch-name:hover { color: var(--terra-deep); text-decoration: underline; }
+.nd-branch-links { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.nd-textlink { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--terra-deep); background: none; border: none; padding: 2px 0; cursor: pointer; white-space: nowrap; }
+.nd-textlink:hover { text-decoration: underline; }
+.nd-textlink:disabled { color: var(--text-4); cursor: default; }
+.nd-compare tfoot th, .nd-compare tfoot td { font-variant-numeric: tabular-nums; }
 
 /* Графік */
 .nd-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; padding: 16px 16px 4px; }
-.nd-card-head h3 { font-size: 16px; font-weight: 700; }
+.nd-card-head h2 { font-size: 16px; font-weight: 700; }
 .nd-card-head p { font-size: 13px; color: var(--text-3); }
 .nd-chart-box { padding: 4px 16px 14px; position: relative; }
 .nd-chart-hit { position: relative; }
@@ -1410,12 +1461,12 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-legend { display: flex; gap: 16px; font-size: 13px; color: var(--text-2); padding: 6px 0 4px; }
 .nd-key { display: inline-block; vertical-align: middle; margin-right: 6px; }
 .nd-key.line { width: 18px; height: 3px; border-radius: 2px; background: var(--info-text); }
-.nd-key.bar { width: 10px; height: 12px; border-radius: 2px; background: #c9b9a2; }
+.nd-key.bar { width: 10px; height: 12px; border-radius: 2px; background: var(--meter-fill); }
 .nd-grid { stroke: var(--line); stroke-width: 1; }
 .nd-axis { font-size: 12px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
 .nd-line { fill: none; stroke: var(--info-text); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
 .nd-dot { fill: var(--info-text); stroke: var(--surface); stroke-width: 2; }
-.nd-bar { fill: #c9b9a2; }
+.nd-bar { fill: var(--meter-fill); }
 .nd-bar.on { fill: #9f8b70; }
 .nd-cross { stroke: #b9ab96; stroke-dasharray: 3 3; }
 .nd-tip { position: absolute; top: 6px; transform: translateX(-50%); background: var(--ink); color: #f4efe7; border-radius: 10px; padding: 8px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; white-space: nowrap; z-index: 2; }
@@ -1428,11 +1479,10 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-details > summary::-webkit-details-marker { display: none; }
 .nd-details > summary::before { content: "▸"; color: var(--text-3); transition: transform .15s; }
 .nd-details[open] > summary::before { transform: rotate(90deg); }
-.nd-details > summary h3 { font-size: 16px; font-weight: 700; }
+.nd-details > summary h2 { font-size: 16px; font-weight: 700; }
 .nd-details > summary span { font-size: 13px; color: var(--text-3); }
 .nd-reveal { padding: 10px 14px 4px; }
 .nd-more { font-size: 13.5px; padding: 8px 0; }
-.nd-table thead th .th-arrow { font-size: 10px; }
 
 /* Бічна панель */
 .nd-drawer-wrap { position: fixed; inset: 0; z-index: 80; }
@@ -1469,22 +1519,50 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-att-title { font-size: 14px; }
 .nd-att-sub { font-size: 12.5px; color: var(--text-3); }
 .nd-work { align-self: flex-start; min-height: 42px; }
+/* Сигнал у панелі огляду філії (той самий рядок, що в списку дій) */
+.nd-signal { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 42px; text-align: left; cursor: pointer; max-width: 100%; }
+button.nd-signal:hover { border-color: #cfc2ad; background: #efe8dc; }
+.nd-signal b { font-weight: 700; }
+.nd-signal-go { color: var(--text-3); margin-left: auto; }
+.nd-signal-tag { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: #ece5d8; color: var(--text-2); }
+.nd-signal.warn .nd-signal-tag { background: var(--warn-soft); color: var(--warn-text); }
+.nd-signal.wide { width: 100%; }
 
-@media (max-width: 1100px) { .nd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) {
-  .nd-kpis { grid-template-columns: 1fr; }
-  .nd-kpi-value { font-size: 28px; }
-  .nd-now { flex-direction: column; align-items: stretch; }
-  .nd-signal { width: 100%; }
-  .nd-spacer { display: none; }
-  /* Таблиця філій → картки з тими самими полями й переходами */
-  .nd-branches .nd-table thead { display: none; }
-  .nd-branches .nd-table, .nd-branches .nd-table tbody, .nd-branches .nd-table tfoot, .nd-branches .nd-table tr { display: block; }
-  .nd-branches .nd-table tr { padding: 12px 14px; border-bottom: 1px solid var(--line); }
-  .nd-branches .nd-table th, .nd-branches .nd-table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: none; padding: 6px 0; text-align: right; }
-  .nd-branches .nd-table td::before, .nd-branches .nd-table tfoot th::before { content: attr(data-label); font-size: 13px; color: var(--text-3); text-align: left; }
-  .nd-branches .nd-table tbody th { padding-bottom: 8px; }
-  .nd-branches .nd-table td:empty { display: none; }
-  .nd-branches .nd-act { justify-content: flex-start; }
+/* Адаптив */
+@media (max-width: 1000px) {
+  .nd-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nd-metric:nth-child(3) { border-left: none; }
+  .nd-metric:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .nd-lead { font-size: 22px; }
+}
+@media (max-width: 860px) {
+  /* Таблиця філій → картки з тими самими полями, смужками й переходами */
+  .nd-compare thead { display: none; }
+  .nd-compare, .nd-compare tbody, .nd-compare tfoot { display: block; }
+  .nd-compare tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .nd-compare tbody tr:last-child { border-bottom: none; }
+  .nd-compare th, .nd-compare td { display: block; border: none; padding: 0; width: auto; }
+  .nd-compare th[scope="row"], .nd-compare td[data-label="Увага"] { grid-column: 1 / -1; }
+  .nd-compare td::before { content: attr(data-label); display: block; font-size: 12.5px; color: var(--text-3); margin-bottom: 2px; }
+  .nd-compare tbody .nd-cell { width: 100%; margin: 0; padding: 0; border: none; }
+  .nd-compare tbody .nd-cell:hover { background: none; }
+  .nd-compare .nd-meter { max-width: none; }
+  .nd-compare tfoot tr { background: #faf6ef; border-top: 2px solid #ddd3c2; }
+  .nd-compare tfoot th { font-size: 15px; }
+  .nd-compare tfoot td { font-weight: 700; }
+}
+@media (max-width: 600px) {
+  .content.nd-brief { padding-left: 16px; padding-right: 16px; }
+  .nd-strip { grid-template-columns: 1fr; }
+  .nd-metric + .nd-metric { border-left: none; border-top: 1px solid var(--line); }
+  .nd-lead { font-size: 19px; line-height: 1.45; }
+  .nd-lead-num { text-underline-offset: 4px; }
+  .nd-head-actions { margin-left: 0; width: 100%; }
+  .nd-head-actions .nd-btn { flex: 1; justify-content: center; }
+  .nd-act-row { flex-wrap: wrap; row-gap: 6px; }
+  .nd-act-text { flex-basis: 100%; order: 3; padding-left: 30px; }
+  .nd-act-go { margin-left: auto; }
+  .nd-compare tr { grid-template-columns: 1fr; gap: 10px; }
   .nd-mini-grid { grid-template-columns: 1fr; }
+  .nd-sec-link { margin-left: 0; }
 }

@@ -15,14 +15,25 @@ interface Props {
   onEnter: (row: BranchRow) => void;
 }
 
-/** Порівняння філій — головний робочий блок. Клітинка відкриває той самий показник лише цієї філії,
-    назва — «Огляд філії» в аналітиці мережі, а «Працювати у філії» змінює робочий контекст. */
+/** Порівняння філій — головний робочий блок. Під кожним числом — смужка відносно найбільшої філії
+    (відвідуваність — відносно 100 %), щоб різницю було видно без читання цифр.
+    Клітинка відкриває той самий показник лише цієї філії, назва — «Огляд філії» в аналітиці мережі,
+    а «Працювати у філії» змінює робочий контекст. */
 export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busyId, onOpen, onEnter }: Props) {
   const withAttention = rows.map((r) => ({ ...r, attention: attentionByTenant[String(r.tenant_id)] ?? 0 }));
   const sort = useSort(withAttention, "students_total", "desc");
   const net = networkTotals(rows);
-  const cell = (kind: PanelKind, row: BranchRow, children: ReactNode, label: string) => (
-    <button type="button" className="nd-cell" aria-label={`${label}: ${row.tenant_name}`} onClick={() => onOpen({ kind, branch: row.tenant_id, scope: "period" })}>
+  const top = (key: keyof BranchRow) => Math.max(1, ...rows.map((r) => Number(r[key] ?? 0)));
+  const max = { students: top("students_total"), fresh: top("students_new"), lessons: top("lessons_completed"), pay: top("payroll_uah") };
+
+  const meter = (value: number, of: number, cls = "") => (
+    <span className={`nd-meter${cls ? ` ${cls}` : ""}`} aria-hidden="true">
+      <i style={{ width: `${Math.max(0, Math.min(100, Math.round((value / of) * 100)))}%` }} />
+    </span>
+  );
+  const cell = (kind: PanelKind, row: BranchRow, label: string, children: ReactNode) => (
+    <button type="button" className="nd-cell" onClick={() => onOpen({ kind, branch: row.tenant_id, scope: "period" })}>
+      <span className="sr-only">{label}, {row.tenant_name}: </span>
       {children}
     </button>
   );
@@ -30,26 +41,25 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
   return (
     <div className="nd-card nd-branches">
       <div className="nd-table-scroll">
-        <table className="nd-table">
+        <table className="nd-table nd-compare">
           <caption className="sr-only">Порівняння філій за обраний період</caption>
           <thead>
             <tr>
               <SortTh sort={sort} field="tenant_name" defaultDir="asc">Філія</SortTh>
-              <SortTh sort={sort} field="students_total" className="r">Діти в базі</SortTh>
-              <SortTh sort={sort} field="students_new" className="r">Нові за період</SortTh>
-              <SortTh sort={sort} field="lessons_completed" className="r">Проведено занять</SortTh>
-              <SortTh sort={sort} field="attendance_rate_pct" className="r">Відвідуваність</SortTh>
-              <SortTh sort={sort} field="payroll_uah" className="r">Нараховано</SortTh>
+              <SortTh sort={sort} field="students_total">Діти в базі</SortTh>
+              <SortTh sort={sort} field="students_new">Нові за період</SortTh>
+              <SortTh sort={sort} field="lessons_completed">Проведено занять</SortTh>
+              <SortTh sort={sort} field="attendance_rate_pct">Відвідуваність</SortTh>
+              <SortTh sort={sort} field="payroll_uah">Нараховано</SortTh>
               <SortTh sort={sort} field="attention">Увага</SortTh>
-              <th><span className="sr-only">Дії</span></th>
             </tr>
           </thead>
           <tbody>
             {loading && rows.length === 0 && [0, 1, 2].map((i) => (
-              <tr key={i}><td colSpan={8}><span className="nd-skel" style={{ width: "100%" }} /></td></tr>
+              <tr key={i}><td colSpan={7}><span className="nd-skel" style={{ width: "100%" }} /></td></tr>
             ))}
             {!loading && rows.length === 0 && (
-              <tr><td colSpan={8}><div className="nd-empty">У вибраних немає активних філій</div></td></tr>
+              <tr><td colSpan={7}><div className="nd-empty">У вибраних немає активних філій</div></td></tr>
             )}
             {sort.sorted.map((r) => {
               const signals = [
@@ -61,30 +71,40 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
               return (
                 <tr key={r.tenant_id}>
                   <th scope="row" data-label="Філія">
-                    <button type="button" className="nd-branch-name" onClick={() => onOpen({ kind: "branch", branch: r.tenant_id, scope: "period" })}>
-                      {r.tenant_name}
-                      <span className="nd-branch-hint">Огляд філії</span>
-                    </button>
+                    <div className="nd-branch">
+                      <button type="button" className="nd-branch-name" onClick={() => onOpen({ kind: "branch", branch: r.tenant_id, scope: "period" })}>
+                        {r.tenant_name}<span className="sr-only"> — огляд філії</span>
+                      </button>
+                      <div className="nd-branch-links">
+                        <button type="button" className="nd-textlink" onClick={() => onOpen({ kind: "branch", branch: r.tenant_id, scope: "period" })}>Огляд філії</button>
+                        {canEnter && (
+                          <button type="button" className="nd-textlink" disabled={busyId !== null} onClick={() => onEnter(r)}>
+                            {busyId === r.tenant_id ? "Переходимо…" : "Працювати у філії →"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </th>
-                  <td className="r" data-label="Діти в базі">{cell("students", r, formatNumber(r.students_total), "Діти в базі")}</td>
-                  <td className="r" data-label="Нові за період">
-                    {cell("new", r, r.students_new > 0 ? `+${formatNumber(r.students_new)}` : "0", "Нові діти")}
+                  <td data-label="Діти в базі">
+                    {cell("students", r, "Діти в базі", <><b>{formatNumber(r.students_total)}</b>{meter(r.students_total, max.students)}</>)}
                   </td>
-                  <td className="r" data-label="Проведено занять">
-                    {cell("lessons", r, <>{formatNumber(r.lessons_completed)}<span className="nd-of"> з {formatNumber(r.lessons_scheduled)}</span></>, "Заняття")}
+                  <td data-label="Нові за період">
+                    {cell("new", r, "Нові діти", <><b>{r.students_new > 0 ? `+${formatNumber(r.students_new)}` : "0"}</b>{meter(r.students_new, max.fresh)}</>)}
                   </td>
-                  <td className="r" data-label="Відвідуваність">
-                    {cell("attendance", r, r.attendance_rate_pct === null ? <span className="nd-muted">немає занять</span> : (
-                      <span className="nd-stack">
-                        {formatPercent(r.attendance_rate_pct)}
-                        <Delta value={r.attendance_change_pp} unit="pp" />
-                      </span>
-                    ), "Відвідуваність")}
+                  <td data-label="Проведено занять">
+                    {cell("lessons", r, "Заняття", <><b>{formatNumber(r.lessons_completed)}</b><span className="nd-of"> з {formatNumber(r.lessons_scheduled)}</span>{meter(r.lessons_completed, max.lessons)}</>)}
                   </td>
-                  <td className="r" data-label="Нараховано">{cell("payroll", r, `${formatCurrency(r.payroll_uah)} ₴`, "Нараховано зарплат")}</td>
+                  <td data-label="Відвідуваність">
+                    {cell("attendance", r, "Відвідуваність", r.attendance_rate_pct === null ? <span className="nd-muted">немає занять</span> : (
+                      <><b>{formatPercent(r.attendance_rate_pct)}</b> <Delta value={r.attendance_change_pp} unit="pp" />{meter(r.attendance_rate_pct, 100, "att")}</>
+                    ))}
+                  </td>
+                  <td data-label="Нараховано">
+                    {cell("payroll", r, "Нараховано зарплат", <><b>{formatCurrency(r.payroll_uah)} ₴</b>{meter(r.payroll_uah, max.pay)}</>)}
+                  </td>
                   <td data-label="Увага">
                     {signals.length === 0 && extra === 0 ? (
-                      <span className="nd-calm">—</span>
+                      <span className="nd-calm">спокійно</span>
                     ) : (
                       <span className="nd-signals">
                         {signals.map((s) => (
@@ -100,13 +120,6 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
                       </span>
                     )}
                   </td>
-                  <td className="nd-act">
-                    {canEnter && (
-                      <button type="button" className="btn ghost sm" disabled={busyId !== null} onClick={() => onEnter(r)}>
-                        {busyId === r.tenant_id ? "Переходимо…" : "Працювати у філії"}
-                      </button>
-                    )}
-                  </td>
                 </tr>
               );
             })}
@@ -115,13 +128,12 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
             <tfoot>
               <tr>
                 <th scope="row" data-label="Філія">Уся мережа</th>
-                <td className="r" data-label="Діти в базі">{formatNumber(net.students_total)}</td>
-                <td className="r" data-label="Нові за період">{net.students_new > 0 ? `+${formatNumber(net.students_new)}` : "0"}</td>
-                <td className="r" data-label="Проведено занять"><span>{formatNumber(net.lessons_completed)}<span className="nd-of"> з {formatNumber(net.lessons_scheduled)}</span></span></td>
-                <td className="r" data-label="Відвідуваність">{net.attendance_rate_pct === null ? "—" : formatPercent(net.attendance_rate_pct)}</td>
-                <td className="r" data-label="Нараховано">{formatCurrency(net.payroll_uah)} ₴</td>
-                <td data-label="Увага">{net.lessons_unmarked_overdue > 0 ? `${formatNumber(net.lessons_unmarked_overdue)} не відмічено` : "—"}</td>
-                <td />
+                <td data-label="Діти в базі">{formatNumber(net.students_total)}</td>
+                <td data-label="Нові за період">{net.students_new > 0 ? `+${formatNumber(net.students_new)}` : "0"}</td>
+                <td data-label="Проведено занять"><span>{formatNumber(net.lessons_completed)}<span className="nd-of"> з {formatNumber(net.lessons_scheduled)}</span></span></td>
+                <td data-label="Відвідуваність">{net.attendance_rate_pct === null ? "—" : formatPercent(net.attendance_rate_pct)}</td>
+                <td data-label="Нараховано">{formatCurrency(net.payroll_uah)} ₴</td>
+                <td data-label="Увага">{net.lessons_unmarked_overdue > 0 ? `${formatNumber(net.lessons_unmarked_overdue)} не відмічено` : "спокійно"}</td>
               </tr>
             </tfoot>
           )}
