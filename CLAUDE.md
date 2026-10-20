@@ -22,8 +22,8 @@ npm run build        # збірка в dist/ (те саме робить Vercel)
 ## Де що
 
 - `src/features/mainBranch/` — дашборд мережі:
-  - `MainBranchPage.tsx` — сторінка: період і філії, «На зараз», 4 показники, таблиця філій, графік, звіти;
-  - `NowStrip.tsx` — рядок «На зараз»; `BranchCompare.tsx` — таблиця філій; `TrendPanel.tsx` — графік;
+  - `MainBranchPage.tsx` — сторінка (варіант «Консоль»): бічна панель + робоча зона — 4 показники, таблиця філій, графік, звіти;
+  - `ConsoleSidebar.tsx` — бічна панель: «На зараз», період, філії, оновлення; `BranchCompare.tsx` — таблиця філій; `TrendPanel.tsx` — графік;
   - `MetricPanel.tsx` — бічна панель розбивок; `ReportTabs.tsx` — детальні звіти; `metrics.tsx` — підсумки й «зміна»;
   - `api.ts` — **типи відповідей справжнього сервера**.
 - `src/demo/mockApi.ts` — вигадана мережа (3 філії, ~5 місяців занять); підміняє `fetch`. `src/demo/DemoStub.tsx` — заглушка для інших сторінок.
