@@ -50,3 +50,14 @@ export function Delta({ value, unit, tone = "good", suffix }: {
 }
 
 export const countLessons = (n: number) => `${formatNumber(n)} ${pluralUk(n, "урок", "уроки", "уроків")}`;
+
+/** Слово й тон сигналу за його severity — однакові в «На зараз», таблиці філій і бічній панелі,
+    щоб один і той самий сигнал не звався в одному місці «Ризик», а в іншому «Важливо». */
+export function severityTag(severity: string): { label: string; tone: "risk" | "warn" | "info" } {
+  if (severity === "critical" || severity === "high") return { label: "Ризик", tone: "risk" };
+  if (severity === "low" || severity === "info") return { label: "Інфо", tone: "info" };
+  return { label: "Увага", tone: "warn" };
+}
+
+/** Порядок сигналів: спершу найважливіші. */
+export const SEVERITY_RANK: Record<string, number> = { critical: 0, high: 1, warning: 2, medium: 3, low: 4, info: 5 };

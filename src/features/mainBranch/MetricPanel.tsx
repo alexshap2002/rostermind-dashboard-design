@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { formatCurrency, formatNumber, formatPercent, pluralUk } from "../../lib/format";
 import { IconClose } from "../../lib/icons";
 import {
-  mainBranchQueries, SEVERITY, UNMARKED_LESSON,
+  mainBranchQueries, UNMARKED_LESSON,
   type AttentionReport, type BranchRow, type MainBranchFilters, type MainBranchKpi,
 } from "./api";
-import { Delta, countLessons, networkTotals, type Panel, type PanelKind } from "./metrics";
+import { Delta, countLessons, networkTotals, severityTag, type Panel, type PanelKind } from "./metrics";
 
 const KYIV_WHEN = new Intl.DateTimeFormat("uk-UA", {
   timeZone: "Europe/Kyiv", weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
@@ -83,11 +83,12 @@ function PanelBody(props: Props & { rowsAll: BranchRow[]; branchName: string | u
   const rows = panel.branch !== null ? rowsAll.filter((r) => r.tenant_id === panel.branch) : rowsAll;
   const net = networkTotals(rows);
   const many = rows.length > 1;
+  // Та сама дія, що й «Працювати у філії» на сторінці: перемикає робочий контекст і відкриває потрібний розділ.
   const work = (r: { tenant_id: number; tenant_name: string }, path: string, what: string) =>
     canEnter ? (
-      <button type="button" className="nd-go" disabled={busyId !== null} aria-label={`${what}: ${r.tenant_name}`} title={what}
+      <button type="button" className="nd-go" disabled={busyId !== null} aria-label={`Працювати у філії ${r.tenant_name}: ${what.toLowerCase()}`} title={`Працювати у філії: ${what.toLowerCase()}`}
         onClick={() => onWork(r.tenant_id, r.tenant_name, path, what)}>
-        {busyId === r.tenant_id ? "Переходимо…" : "У філії →"}
+        {busyId === r.tenant_id ? "Переходимо…" : "Працювати →"}
       </button>
     ) : null;
   const scopeQuery = panel.scope === "now" ? props.nowFilters : props.filters;
@@ -194,8 +195,26 @@ function PanelBody(props: Props & { rowsAll: BranchRow[]; branchName: string | u
           {many && <Total cells={["Уся мережа", formatNumber(net.lessons_scheduled), formatNumber(net.lessons_completed), formatNumber(net.lessons_upcoming), formatNumber(net.lessons_unmarked_overdue)]} />}
         </Table>
       );
-    case "attention":
-      return <AttentionList items={(props.attention?.items ?? []).filter((it) => panel.branch === null || it.tenant_id === panel.branch)} all />;
+    case "attention": {
+      // Як і в «На зараз»: невідмічені уроки — один сигнал із переходом до списку, решта — окремими рядками.
+      const items = (props.attention?.items ?? []).filter((it) => panel.branch === null || it.tenant_id === panel.branch);
+      const unmarkedItems = items.filter((it) => it.anomaly_type === UNMARKED_LESSON);
+      const unmarkedBranches = new Set(unmarkedItems.map((it) => it.tenant_id)).size;
+      const others = items.filter((it) => it.anomaly_type !== UNMARKED_LESSON);
+      return (
+        <>
+          {unmarkedItems.length > 0 && (
+            <button type="button" className="nd-signal warn wide" onClick={() => onPanel({ kind: "unmarked", branch: panel.branch, scope: panel.scope })}>
+              <span className="nd-signal-tag">Увага</span>
+              <b>{countLessons(unmarkedItems.length)} не відмічено</b>
+              {panel.branch === null && <span className="nd-signal-sub">{formatNumber(unmarkedBranches)} {pluralUk(unmarkedBranches, "філія", "філії", "філій")}</span>}
+              <span className="nd-signal-go" aria-hidden="true">→</span>
+            </button>
+          )}
+          <AttentionList items={others} all={unmarkedItems.length === 0} />
+        </>
+      );
+    }
     case "branch": {
       const r = rows[0];
       if (!r) return <div className="nd-empty">Філію не знайдено у вибраних</div>;
@@ -257,10 +276,10 @@ function AttentionList({ items, all = false }: { items: AttentionReport["items"]
     <div className="nd-att">
       <h4>Сигнали</h4>
       {items.map((it, i) => {
-        const sev = SEVERITY[it.severity] ?? SEVERITY.info;
+        const sev = severityTag(it.severity);
         return (
           <div key={i} className="nd-att-item">
-            <span className={`nd-pill ${sev.tone === "delete" ? "risk" : "warn"}`}>{sev.label}</span>
+            <span className={`nd-pill ${sev.tone}`}>{sev.label}</span>
             <div>
               <div className="nd-att-title">{it.summary}</div>
               <div className="nd-att-sub">{[it.tenant_name, it.club_name].filter(Boolean).join(" · ")}</div>

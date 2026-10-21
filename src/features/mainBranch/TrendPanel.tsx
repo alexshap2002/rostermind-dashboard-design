@@ -12,14 +12,14 @@ export interface TrendPoint {
   expected: number;
 }
 
-const PAD_L = 40;
+const PAD_L = 52;
 const PAD_R = 12;
 
 /** Динаміка мережі: відвідуваність (шкала 0–100 %) і кількість проведених занять (своя шкала) —
     два компактні графіки зі спільною віссю дат і спільною підказкою; під ними — таблиця для читачів екрана.
     `dark` — тема для темної hero-плитки; `compact` — нижчі графіки, щоб плитка вміщалась у перший екран. */
-export function TrendPanel({ points, loading, dark = false, compact = false }: {
-  points: TrendPoint[]; loading: boolean; dark?: boolean; compact?: boolean;
+export function TrendPanel({ points, loading, error = false, dark = false, compact = false, onRetry }: {
+  points: TrendPoint[]; loading: boolean; error?: boolean; dark?: boolean; compact?: boolean; onRetry?: () => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(720);
@@ -37,8 +37,8 @@ export function TrendPanel({ points, loading, dark = false, compact = false }: {
   const n = points.length;
   const innerW = width - PAD_L - PAD_R;
   const x = (i: number) => PAD_L + (n <= 1 ? innerW / 2 : (i * innerW) / (n - 1));
-  const rateH = compact ? 96 : 150;
-  const barsH = compact ? 46 : 78;
+  const rateH = compact ? 84 : 150;
+  const barsH = compact ? 40 : 78;
   const yRate = (v: number) => 8 + (1 - v / 100) * (rateH - 16);
   const maxLessons = Math.max(1, ...points.map((p) => p.lessons));
   const niceMax = maxLessons <= 5 ? 5 : Math.ceil(maxLessons / 5) * 5;
@@ -66,6 +66,14 @@ export function TrendPanel({ points, loading, dark = false, compact = false }: {
   const cls = `nd-chart-box${dark ? " dark" : ""}`;
 
   if (loading) return <div className={cls}><span className="nd-skel" style={{ width: "100%", height: rateH + barsH + 40 }} /></div>;
+  if (error) {
+    return (
+      <div className={`nd-empty nd-err${dark ? " on-dark" : ""}`} role="status">
+        Не вдалося завантажити динаміку.{" "}
+        {onRetry && <button type="button" className="link" onClick={onRetry}>Спробувати ще</button>}
+      </div>
+    );
+  }
   if (n === 0) return <div className={`nd-empty${dark ? " on-dark" : ""}`}>За період немає даних</div>;
 
   return (
@@ -97,7 +105,7 @@ export function TrendPanel({ points, loading, dark = false, compact = false }: {
           {[0, niceMax].map((v) => (
             <g key={v}>
               <line x1={PAD_L} x2={width - PAD_R} y1={yBar(v)} y2={yBar(v)} className="nd-grid" />
-              <text x={PAD_L - 8} y={yBar(v) + 4} className="nd-axis" textAnchor="end">{v}</text>
+              <text x={PAD_L - 8} y={yBar(v) + 4} className="nd-axis" textAnchor="end">{v === 0 ? "0" : `${v} зан.`}</text>
             </g>
           ))}
           {points.map((p, i) => (
@@ -111,7 +119,8 @@ export function TrendPanel({ points, loading, dark = false, compact = false }: {
               className={`nd-bar${i === hover ? " on" : ""}`}
             />
           ))}
-          {points.map((p, i) => (i % labelEvery === 0 || i === n - 1 ? (
+          {/* Останній підпис — завжди; звичайні — лише якщо не налазять на нього */}
+          {points.map((p, i) => (i === n - 1 || (i % labelEvery === 0 && n - 1 - i >= labelEvery) ? (
             <text key={i} x={x(i)} y={barsH + 16} className="nd-axis" textAnchor="middle">{p.label}</text>
           ) : null))}
         </svg>
