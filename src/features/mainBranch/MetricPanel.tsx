@@ -42,9 +42,11 @@ interface Props {
 
 export function MetricPanel(props: Props) {
   const { panel, onPanel } = props;
-  const closeRef = useRef<HTMLButtonElement>(null);
+  // Фокус — на заголовок панелі, а не на «✕»: перше, що чує читач екрана, — що відкрилося,
+  // а для миші теракотове кільце в куті не стає найпомітнішим елементом.
+  const titleRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    closeRef.current?.focus();
+    titleRef.current?.focus();
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onPanel(null); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -61,14 +63,14 @@ export function MetricPanel(props: Props) {
         <header className="nd-drawer-head">
           <div>
             <div className="nd-eyebrow">{scopeLabel}</div>
-            <h3 id="nd-drawer-title">{panel.kind === "branch" ? branchName ?? "Філія" : TITLES[panel.kind]}</h3>
+            <h3 id="nd-drawer-title" ref={titleRef} tabIndex={-1}>{panel.kind === "branch" ? branchName ?? "Філія" : TITLES[panel.kind]}</h3>
             {panel.branch !== null && panel.kind !== "branch" && (
               <button type="button" className="nd-chip on" onClick={() => onPanel({ ...panel, branch: null })}>
                 Лише {branchName} <span aria-hidden="true">✕</span><span className="sr-only">— показати всі філії</span>
               </button>
             )}
           </div>
-          <button ref={closeRef} type="button" className="nd-icon-btn" aria-label="Закрити" onClick={() => onPanel(null)}><IconClose /></button>
+          <button type="button" className="nd-icon-btn" aria-label="Закрити" onClick={() => onPanel(null)}><IconClose /></button>
         </header>
         <div className="nd-drawer-body">
           <PanelBody {...props} rowsAll={rowsAll} branchName={branchName} />
@@ -87,7 +89,7 @@ function PanelBody(props: Props & { rowsAll: BranchRow[]; branchName: string | u
     canEnter ? (
       <button type="button" className="nd-go" disabled={busyId !== null} aria-label={`${what}: ${r.tenant_name}`} title={what}
         onClick={() => onWork(r.tenant_id, r.tenant_name, path, what)}>
-        {busyId === r.tenant_id ? "Переходимо…" : "У філії →"}
+        {busyId === r.tenant_id ? "Переходимо…" : "Працювати у філії →"}
       </button>
     ) : null;
   const scopeQuery = panel.scope === "now" ? props.nowFilters : props.filters;

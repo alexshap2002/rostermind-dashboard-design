@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { formatCurrency, formatNumber, formatPercent, pluralUk } from "../../lib/format";
+import { formatCurrency, formatDayMonth, formatNumber, formatPercent, formatRangeShort, pluralUk } from "../../lib/format";
+import { IconCheck } from "../../lib/icons";
 import type { MainBranchKpi, TrendsReport } from "./api";
 import { Delta, type PanelKind } from "./metrics";
 
@@ -12,18 +13,23 @@ interface Props {
   onOpen: (kind: PanelKind) => void;
 }
 
-/** Чотири головні показники періоду одним рядком: число, зміна, міні-графік за той самий період.
+/** Чотири головні показники періоду одним рядком: число, зміна, і під ним — або окрема дія
+    («+N нових», «N не відмічено» — бриф §3 В, §4), або міні-графік за той самий період.
     Кожна колонка — кнопка «Переглянути по філіях». */
 export function MetricStrip({ kpi, series, mode, noCompare, onOpen }: Props) {
   const k = kpi;
   const pts = series ? (mode === "daily" ? series.daily : series.weekly) : [];
   const step = mode === "daily" ? "по днях" : "по тижнях";
+  const labels = series
+    ? (mode === "daily" ? series.daily.map((p) => formatDayMonth(p.date)) : series.weekly.map((p) => formatRangeShort(p.date_from, p.date_to)))
+    : [];
   const attDelta = k?.comparison.attendance_rate_pct?.delta_percentage_points;
   const payDelta = k?.comparison.payroll_total_uah?.delta_percent;
   const compare = (delta: number | null | undefined, unit: "pp" | "pct", tone: "good" | "neutral"): ReactNode =>
     noCompare ? "порівняємо завтра — день ще триває"
       : delta === null || delta === undefined ? "немає з чим порівняти"
         : <><Delta value={delta} unit={unit} tone={tone} /> до попереднього періоду</>;
+  const upcoming = k ? (k.lessons_upcoming > 0 ? `${formatNumber(k.lessons_upcoming)} попереду` : "попереду занять немає") : "";
 
   return (
     <div className="nd-strip" role="group" aria-label="Основні показники за період">
@@ -44,13 +50,19 @@ export function MetricStrip({ kpi, series, mode, noCompare, onOpen }: Props) {
         label="Проведено занять"
         loading={!k}
         value={k && <>{formatNumber(k.lessons_completed)}<small> з {formatNumber(k.lessons_scheduled)}</small></>}
-        sub={k && (
-          k.lessons_unmarked_overdue > 0
-            ? <><span className="nd-warn-text">{formatNumber(k.lessons_unmarked_overdue)} не відмічено</span>{k.lessons_upcoming > 0 && <> · {formatNumber(k.lessons_upcoming)} попереду</>}</>
-            : <>усі відмічено{k.lessons_upcoming > 0 && <> · {formatNumber(k.lessons_upcoming)} попереду</>}</>
-        )}
+        sub={k && (k.lessons_unmarked_overdue > 0 ? upcoming : <>усі минулі відмічено · {upcoming}</>)}
         onOpen={() => onOpen("lessons")}
-        foot={<Spark kind="bars" values={pts.map((p) => p.lessons)} label={`Проведено занять ${step}`} format={(v) => formatNumber(v)} />}
+        foot={k && (
+          // «Не відмічено» — окрема дія, що веде до прострочених уроків (бриф §4), а не частина кнопки показника.
+          k.lessons_unmarked_overdue > 0 ? (
+            <button type="button" className="nd-chip-new warn" onClick={() => onOpen("unmarked")}>
+              {formatNumber(k.lessons_unmarked_overdue)} {pluralUk(k.lessons_unmarked_overdue, "заняття не відмічено", "заняття не відмічено", "занять не відмічено")}
+              <span aria-hidden="true"> →</span>
+            </button>
+          ) : (
+            <span className="nd-foot-ok"><IconCheck aria-hidden="true" /> невідмічених немає</span>
+          )
+        )}
       />
       <Metric
         label="Відвідуваність"
@@ -58,7 +70,8 @@ export function MetricStrip({ kpi, series, mode, noCompare, onOpen }: Props) {
         value={k && (k.attendance_has_data ? formatPercent(k.attendance_rate_pct) : "—")}
         sub={k && (k.attendance_has_data ? compare(attDelta, "pp", "good") : "занять з дітьми не було")}
         onOpen={() => onOpen("attendance")}
-        foot={<Spark kind="line" values={pts.map((p) => (p.attendance_rate_pct === null ? null : Number(p.attendance_rate_pct)))} label={`Відвідуваність ${step}`} format={(v) => formatPercent(v)} />}
+        foot={<Spark kind="line" values={pts.map((p) => (p.attendance_rate_pct === null ? null : Number(p.attendance_rate_pct)))} labels={labels}
+          label={`Відвідуваність ${step}`} note={step} format={(v) => formatPercent(v)} />}
       />
       <Metric
         label="Нараховано зарплат"
@@ -66,7 +79,9 @@ export function MetricStrip({ kpi, series, mode, noCompare, onOpen }: Props) {
         value={k && `${formatCurrency(k.payroll_total_uah)} ₴`}
         sub={k && compare(payDelta, "pct", "neutral")}
         onOpen={() => onOpen("payroll")}
-        foot={<Spark kind="bars" values={pts.map((p) => Number(p.payroll_uah))} label={`Нараховано ${step}`} format={(v) => `${formatCurrency(v)} ₴`} />}
+        foot={<Spark kind="bars" values={pts.map((p) => Number(p.payroll_uah))} labels={labels}
+          // Тренд сервера розбиває по днях лише оплату за заняття; бонуси — тільки в підсумку (бриф §8: пояснити відмінність).
+          label={`Нараховано за заняття ${step}, без бонусів`} note={`${step}, лише за заняття`} format={(v) => `${formatCurrency(v)} ₴`} />}
       />
     </div>
   );
@@ -79,46 +94,57 @@ function Metric({ label, value, sub, foot, loading, onOpen }: {
     <div className="nd-metric">
       <button type="button" className="nd-metric-main" onClick={onOpen}>
         <span className="nd-metric-label">{label}</span>
-        {loading ? <span className="nd-skel" style={{ width: 120, height: 34 }} /> : <span className="nd-metric-value num">{value}</span>}
+        {loading ? <span className="nd-skel" style={{ width: 120, height: 30 }} /> : <span className="nd-metric-value num">{value}</span>}
         <span className="nd-metric-sub">{loading ? <span className="nd-skel" style={{ width: 160, height: 14 }} /> : sub}</span>
         <span className="nd-metric-go">Переглянути по філіях →</span>
       </button>
       <div className="nd-metric-foot">
-        {loading ? <span className="nd-skel" style={{ width: "100%", height: 32 }} /> : foot}
+        {loading ? <span className="nd-skel" style={{ width: "100%", height: 30 }} /> : foot}
       </div>
     </div>
   );
 }
 
 const W = 160;
-const H = 32;
+const H = 26;
 
 /** Міні-графік за період: лінія (з розривами на днях без занять) або стовпчики.
-    Текстова альтернатива — діапазон значень у підписі. */
-function Spark({ values, kind, label, format }: {
-  values: (number | null)[]; kind: "line" | "bars"; label: string; format: (v: number) => string;
+    Шкала лінії не від нуля, тому діапазон значень видно підписом під графіком (і в aria-label),
+    а точне значення кожної точки — у підказці при наведенні. */
+function Spark({ values, labels, kind, label, note, format }: {
+  values: (number | null)[]; labels: string[]; kind: "line" | "bars"; label: string; note: string; format: (v: number) => string;
 }) {
   const nums = values.filter((v): v is number => v !== null);
   if (values.length === 0 || nums.length === 0) return <span className="nd-spark-empty">за період даних немає</span>;
   const n = values.length;
   const min = Math.min(...nums);
   const max = Math.max(...nums);
-  const title = `${label}: від ${format(min)} до ${format(max)}`;
+  const range = kind === "bars" ? `до ${format(max)}` : `${format(min).replace(/\s?%$/, "")}–${format(max)}`;
+  const title = `${label}: ${kind === "bars" ? `найбільше ${format(max)}` : `від ${format(min)} до ${format(max)}`}`;
+  const tip = (i: number, v: number) => `${labels[i] ?? ""}: ${format(v)}`;
+  const caption = <span className="nd-spark-cap" aria-hidden="true">{note} · {range}</span>;
 
   if (kind === "bars") {
     const top = Math.max(1, max);
     const slot = W / n;
     const bw = Math.max(1.5, slot * 0.62);
     return (
-      <svg className="nd-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={title}>
-        <title>{title}</title>
-        <line x1={0} x2={W} y1={H - 0.5} y2={H - 0.5} className="nd-spark-base" />
-        {values.map((v, i) => {
-          if (!v) return null;
-          const h = Math.max(1.5, (v / top) * (H - 3));
-          return <rect key={i} x={i * slot + (slot - bw) / 2} y={H - 1 - h} width={bw} height={h} className="nd-spark-bar" />;
-        })}
-      </svg>
+      <span className="nd-spark-wrap">
+        <svg className="nd-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={title}>
+          <title>{title}</title>
+          <line x1={0} x2={W} y1={H - 0.5} y2={H - 0.5} className="nd-spark-base" />
+          {values.map((v, i) => {
+            if (!v) return null;
+            const h = Math.max(1.5, (v / top) * (H - 3));
+            return (
+              <rect key={i} x={i * slot + (slot - bw) / 2} y={H - 1 - h} width={bw} height={h} className="nd-spark-bar">
+                <title>{tip(i, v)}</title>
+              </rect>
+            );
+          })}
+        </svg>
+        {caption}
+      </span>
     );
   }
 
@@ -142,11 +168,20 @@ function Spark({ values, kind, label, format }: {
   });
   flush();
   return (
-    <svg className="nd-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={title}>
-      <title>{title}</title>
-      {segments.map((s, i) => (s.single
-        ? <circle key={i} cx={s.single[0]} cy={s.single[1]} r={1.8} className="nd-spark-dot" />
-        : <polyline key={i} points={s.points} className="nd-spark-line" />))}
-    </svg>
+    <span className="nd-spark-wrap">
+      <svg className="nd-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={title}>
+        <title>{title}</title>
+        {segments.map((s, i) => (s.single
+          ? <circle key={i} cx={s.single[0]} cy={s.single[1]} r={1.8} className="nd-spark-dot" />
+          : <polyline key={i} points={s.points} className="nd-spark-line" />))}
+        {/* Невидимі цілі для підказки з точним значенням кожного дня */}
+        {values.map((v, i) => (v === null ? null : (
+          <rect key={`t${i}`} x={x(i) - (n <= 1 ? W / 2 : W / (n - 1) / 2)} y={0} width={n <= 1 ? W : W / (n - 1)} height={H} className="nd-spark-hit">
+            <title>{tip(i, v)}</title>
+          </rect>
+        )))}
+      </svg>
+      {caption}
+    </span>
   );
 }

@@ -60,7 +60,7 @@ function humanRange(from: string, to: string): string {
   return `${DAY_MONTH.format(f)}${year(f)} – ${DAY_MONTH.format(t)}${year(t)}`;
 }
 
-/** Що з чим порівнюємо — словами, щоб «−2 в.п.» не виглядали загадкою. */
+/** Що з чим порівнюємо — словами й у тому ж форматі дат, що й лід, щоб «−2 в.п.» не виглядали загадкою. */
 function compareText(comparison: MainBranchKpi["comparison"], filters: MainBranchFilters): string {
   const cur = comparison.current_period;
   const prev = comparison.previous_period;
@@ -71,9 +71,9 @@ function compareText(comparison: MainBranchKpi["comparison"], filters: MainBranc
   const span = Math.round((utc(cur.date_to).getTime() - utc(cur.date_from).getTime()) / 86_400_000) + 1;
   const notes = [
     span < 28 ? "ті самі дні тижня" : null,
-    cur.date_to.slice(0, 10) !== filters.dateTo ? "без сьогодні — день ще триває" : null,
+    cur.date_to.slice(0, 10) !== filters.dateTo ? "без сьогодні" : null,
   ].filter(Boolean);
-  return `Порівнюємо ${formatRangeShort(cur.date_from, cur.date_to)} з ${formatRangeShort(prev.date_from, prev.date_to)}${notes.length ? ` (${notes.join(", ")})` : ""}`;
+  return `Порівнюємо ${humanRange(cur.date_from, cur.date_to)} з ${humanRange(prev.date_from, prev.date_to)}${notes.length ? ` (${notes.join(", ")})` : ""}`;
 }
 
 type Preset = "today" | "week" | "month" | "prev" | "custom";
@@ -172,6 +172,8 @@ export function MainBranchPage() {
   const network = useQuery(mainBranchQueries.context());
   const [filters, setFilters] = useState<MainBranchFilters>(initial.filters);
   const [tab, setTab] = useState<Tab>(initial.tab ?? "lessons");
+  // «Детальні звіти» розгорнуті лише коли власник їх відкрив (тоді вкладка є в адресі) — не після кожного перезавантаження.
+  const [reportsOpen, setReportsOpen] = useState(initial.tab !== null);
   const [panel, setPanelState] = useState<Panel | null>(initial.panel);
   const [problemFilter, setProblemFilter] = useState<{ severity?: string; type?: string; cursor: number }>({ cursor: 0 });
   const [trendMode, setTrendMode] = useState<"daily" | "weekly" | null>(null);
@@ -181,8 +183,21 @@ export function MainBranchPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const branchMenuRef = useRef<HTMLDivElement>(null);
+  /** Хто відкрив панель (число в ліді, KPI, клітинка таблиці) — туди повертаємо фокус після закриття. */
+  const panelOpener = useRef<HTMLElement | null>(null);
   const preset: Preset = customOpen ? "custom" : presetOf(filters);
-  const setPanel = useCallback((next: Panel | null) => setPanelState(next), []);
+  const setPanel = useCallback((next: Panel | null) => {
+    const active = document.activeElement;
+    // Перехід між панелями (клік усередині шторки) не перезаписує елемент-тригер зі сторінки.
+    if (next && active instanceof HTMLElement && !active.closest(".nd-drawer-wrap")) panelOpener.current = active;
+    setPanelState(next);
+  }, []);
+  useEffect(() => {
+    if (panel !== null || !panelOpener.current) return;
+    const el = panelOpener.current;
+    panelOpener.current = null;
+    if (el.isConnected) el.focus();
+  }, [panel]);
 
   // Стан сторінки (період, філії, вкладка, відкрита панель) живе в адресі: «Назад до мережі» повертає сюди ж.
   useEffect(() => {
@@ -190,7 +205,7 @@ export function MainBranchPage() {
     params.set("date_from", filters.dateFrom);
     params.set("date_to", filters.dateTo);
     for (const id of filters.branchIds) params.append("branch_ids", String(id));
-    params.set("tab", tab);
+    if (reportsOpen) params.set("tab", tab);
     if (panel) {
       params.set("panel", panel.kind);
       if (panel.branch !== null) params.set("panel_branch", String(panel.branch));
@@ -199,17 +214,27 @@ export function MainBranchPage() {
     const url = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, "", url);
     rememberNetworkUrl(url);
-  }, [filters.branchIds, filters.dateFrom, filters.dateTo, tab, panel]);
+  }, [filters.branchIds, filters.dateFrom, filters.dateTo, tab, reportsOpen, panel]);
 
   useEffect(() => {
     if (!branchMenu) return;
     const close = (e: MouseEvent) => { if (!branchMenuRef.current?.contains(e.target as Node)) setBranchMenu(false); };
+    // Escape закриває меню й повертає фокус на його кнопку — як у звичайного випадного списку.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setBranchMenu(false);
+      branchMenuRef.current?.querySelector<HTMLButtonElement>(".nd-dd-btn")?.focus();
+    };
     document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("click", close); document.removeEventListener("keydown", onKey); };
   }, [branchMenu]);
 
   const datasets = useMemo(() => new Set(network.data?.capabilities.datasets ?? []), [network.data]);
   const enabled = (dataset: string) => Boolean(network.data && datasets.has(dataset));
+  /** Ще вантажимо: поки немає контексту мережі, залежні запити вимкнені й isLoading у них false —
+      без цього блоки на мить показували б хибне «Усе відмічено» / «немає філій». */
+  const pending = (q: { isPending: boolean }, dataset: string) => !network.data || (datasets.has(dataset) && q.isPending);
   const visibleTabs = useMemo(() => TABS.filter((t) => datasets.has(t.dataset)), [datasets]);
 
   const today = iso(kyivToday());
@@ -309,12 +334,12 @@ export function MainBranchPage() {
   const branchesLabel = allBranches
     ? `Усі філії (${formatNumber(activeBranches.length)})`
     : selectedNames.length === 1 ? selectedNames[0] : `${formatNumber(selectedNames.length)} ${pluralUk(selectedNames.length, "філія", "філії", "філій")}`;
-  // Підмет лід-речення: «мережа», «філія «Львів»» або «2 філії».
-  const subject = allBranches ? "мережа" : selectedNames.length === 1 ? `філія «${selectedNames[0]}»` : `${formatNumber(selectedNames.length)} ${pluralUk(selectedNames.length, "філія", "філії", "філій")}`;
-  const subjectPlural = !allBranches && selectedNames.length > 1;
+  // «У базі мережі / філії «Львів» / 2 філій …» — родовий відмінок для лід-речення.
+  const subject = allBranches ? "мережі" : selectedNames.length === 1 ? `філії «${selectedNames[0]}»` : `${formatNumber(selectedNames.length)} ${pluralUk(selectedNames.length, "філії", "філій", "філій")}`;
   const noCompare = Boolean(k && !k.comparison.previous_period);
   const failed = [kpi, trends, attention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
   const attentionByTenant = periodAttention.data?.totals.by_tenant ?? {};
+  const periodItems = periodAttention.data?.items ?? [];
   const open = (kind: PanelKind) => setPanel({ kind, branch: null, scope: "period" });
   const kickerMeta = network.data
     ? [`${formatNumber(activeBranches.length)} ${pluralUk(activeBranches.length, "активна філія", "активні філії", "активних філій")}`,
@@ -377,9 +402,8 @@ export function MainBranchPage() {
           {/* Лід: головні числа періоду одним реченням; кожне число відкриває розбивку по філіях */}
           <Lead
             kpi={k}
-            when={preset === "today" ? "Сьогодні" : `За ${humanRange(filters.dateFrom, filters.dateTo)}`}
+            period={preset === "today" ? "сьогодні" : `за ${humanRange(filters.dateFrom, filters.dateTo)}`}
             subject={subject}
-            plural={subjectPlural}
             onOpen={open}
           />
           {k && <p className="nd-lead-meta">{compareText(k.comparison, filters)}</p>}
@@ -393,30 +417,27 @@ export function MainBranchPage() {
           </div>
         )}
 
-        {/* ── Б. Потребує дії зараз ── */}
+        {/* ── Б. На зараз ── */}
         <NowStrip
           today={todayKpi.data}
           unmarked={unmarked.data}
           attention={attention.data}
           days={NOW_DAYS}
-          loading={todayKpi.isLoading || unmarked.isLoading || attention.isLoading}
+          loading={pending(todayKpi, "kpi") || pending(unmarked, "anomalies") || pending(attention, "attention")}
           onOpen={setPanel}
         />
 
-        {/* ── В. Основні показники за період ── */}
+        {/* ── В. Основні показники за період; допоміжні числа (працівники, скасовані) — у підзаголовку ── */}
         <section className="nd-sec" aria-labelledby="nd-kpi-title">
           <div className="nd-sec-head">
             <h2 id="nd-kpi-title">Показники за період</h2>
-            <span>{periodLabel} · {branchesLabel} · {mode === "daily" ? "міні-графіки по днях" : "міні-графіки по тижнях"}</span>
+            <span>
+              {periodLabel} · {branchesLabel}
+              {k && <> · {formatNumber(k.teachers_total)} {pluralUk(k.teachers_total, "працівник", "працівники", "працівників")}</>}
+              {k && k.lessons_cancelled > 0 && <> · {formatNumber(k.lessons_cancelled)} {pluralUk(k.lessons_cancelled, "заняття скасовано", "заняття скасовано", "занять скасовано")}</>}
+            </span>
           </div>
           <MetricStrip kpi={k} series={trends.data?.series} mode={mode} noCompare={noCompare} onOpen={open} />
-          {k && (
-            <p className="nd-aux">
-              {formatNumber(k.branches_total)} {pluralUk(k.branches_total, "активна філія", "активні філії", "активних філій")}
-              {" · "}{formatNumber(k.teachers_total)} {pluralUk(k.teachers_total, "працівник", "працівники", "працівників")}
-              {k.lessons_cancelled > 0 && <> · {formatNumber(k.lessons_cancelled)} {pluralUk(k.lessons_cancelled, "заняття скасовано", "заняття скасовано", "занять скасовано")}</>}
-            </p>
-          )}
         </section>
 
         {/* ── Г. Філії ── */}
@@ -427,8 +448,9 @@ export function MainBranchPage() {
           </div>
           <BranchCompare
             rows={k?.branch_rows ?? []}
+            attention={periodItems}
             attentionByTenant={attentionByTenant}
-            loading={kpi.isLoading}
+            loading={pending(kpi, "kpi")}
             canEnter={canEnter}
             busyId={busyId}
             onOpen={setPanel}
@@ -457,7 +479,7 @@ export function MainBranchPage() {
         </section>
 
         {/* ── Детальні звіти ── */}
-        <details className="nd-details" open={initial.tab !== null}>
+        <details className="nd-details" open={reportsOpen} onToggle={(e) => setReportsOpen(e.currentTarget.open)}>
           <summary><h2>Детальні звіти</h2><span>заняття, гуртки, відвідуваність, зарплати, сигнали — за обраний період</span></summary>
           <ReportTabs
             tab={tab}

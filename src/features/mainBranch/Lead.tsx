@@ -10,17 +10,17 @@ function Num({ kind, onOpen, children }: { kind: PanelKind; onOpen: (kind: Panel
   );
 }
 
-/** Лід брифу: одне речення з головними числами періоду. Усі числа клікабельні.
-    «За 1–20 жовтня мережа охоплює 674 дитини (+19 нових), провела 79 занять з 88 запланованих
-    з відвідуваністю 77,3 % і нарахувала 25 020 ₴ зарплат.» */
-export function Lead({ kpi, when, subject, plural, onOpen }: {
+/** Лід брифу: два речення з головними числами. Усі числа клікабельні.
+    «У базі мережі 674 дитини (+19 нових за 1–20 жовтня). За період проведено 79 занять з 88 запланованих,
+    відвідуваність 77,3 %, нараховано 25 020 ₴ зарплат.»
+    Перше речення — поточна база (знімок на кінець періоду), друге — показники за період:
+    бриф §4–5 просить не змішувати базу дітей із періодом. */
+export function Lead({ kpi, period, subject, onOpen }: {
   kpi: MainBranchKpi | undefined;
-  /** «За 1–20 жовтня» або «Сьогодні» */
-  when: string;
-  /** «мережа», «філія «Львів»», «2 філії» */
+  /** «за 1–20 жовтня» або «сьогодні» — стоїть у дужках після нових */
+  period: string;
+  /** Родовий відмінок: «мережі», «філії «Львів»», «2 філій» */
   subject: string;
-  /** Підмет у множині — дієслова теж («охоплюють», «провели») */
-  plural: boolean;
   onOpen: (kind: PanelKind) => void;
 }) {
   if (!kpi) {
@@ -35,20 +35,22 @@ export function Lead({ kpi, when, subject, plural, onOpen }: {
   const fresh = kpi.students_new;
   const done = kpi.lessons_completed;
   const planned = kpi.lessons_scheduled;
+  const today = period === "сьогодні";
 
-  // Друге речення — безособове («проведено», «нараховано»): узгоджувати з підметом треба лише перше.
+  // Друге речення — безособове («проведено», «нараховано»): узгоджувати з підметом нічого не треба.
   return (
     <p className="nd-lead">
-      {when} {subject} {plural ? "охоплюють" : "охоплює"}{" "}
-      <Num kind="students" onOpen={onOpen}>{formatNumber(kids)} {pluralUk(kids, "дитину", "дитини", "дітей")}</Num>
-      {" "}(<Num kind="new" onOpen={onOpen}>{fresh > 0 ? `+${formatNumber(fresh)} ${pluralUk(fresh, "нова", "нові", "нових")}` : "нових немає"}</Num>).{" "}
+      У базі {subject}{" "}
+      <Num kind="students" onOpen={onOpen}>{formatNumber(kids)} {pluralUk(kids, "дитина", "дитини", "дітей")}</Num>
+      {" "}<span className="nd-lead-paren">(<Num kind="new" onOpen={onOpen}>{fresh > 0 ? `+${formatNumber(fresh)} ${pluralUk(fresh, "нова", "нові", "нових")} ${period}` : `нових ${period} немає`}</Num>).</span>{" "}
+      {today ? "Сьогодні" : "За період"}{" "}
       {planned === 0 ? (
-        <>Занять за період не було, </>
+        <>занять не було, </>
       ) : (
         <>
-          Проведено{" "}
+          проведено{" "}
           <Num kind="lessons" onOpen={onOpen}>{formatNumber(done)} {pluralUk(done, "заняття", "заняття", "занять")}</Num>
-          {" "}з {formatNumber(planned)} {planned === 1 ? "запланованого" : "запланованих"},{" "}
+          {" "}<span className="nd-nowrap">з {formatNumber(planned)} {planned === 1 ? "запланованого" : "запланованих"}</span>,{" "}
           {kpi.attendance_has_data
             ? <>відвідуваність <Num kind="attendance" onOpen={onOpen}>{formatPercent(kpi.attendance_rate_pct)}</Num>, </>
             : <>відвідуваність поки без даних, </>}

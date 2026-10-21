@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { formatCurrency, formatNumber, formatPercent, pluralUk } from "../../lib/format";
-import type { BranchRow } from "./api";
+import { UNMARKED_LESSON, type AttentionItem, type BranchRow } from "./api";
 import { Delta, networkTotals, type Panel, type PanelKind } from "./metrics";
 import { SortTh, useSort } from "./sort";
 
 interface Props {
   rows: BranchRow[];
-  /** Сигнали уваги за обраний період по філіях (крім невідмічених — вони в окремій колонці даних). */
+  /** Сигнали уваги за обраний період (усі філії): з них беремо текст сигналу для колонки «Увага». */
+  attention: AttentionItem[];
+  /** Кількість сигналів за період по філіях — для сортування колонки «Увага» й лічильника «ще N». */
   attentionByTenant: Record<string, number>;
   loading: boolean;
   canEnter: boolean;
@@ -15,19 +17,32 @@ interface Props {
   onEnter: (row: BranchRow) => void;
 }
 
+/** Куди веде сигнал: падіння відвідуваності — у розбивку відвідуваності філії, решта — у список сигналів філії. */
+const signalPanel = (type: string): PanelKind => (type === "ATTENDANCE_DROP" ? "attendance" : "attention");
+
+/** Короткий текст сигналу для вузької клітинки: з підсумку сервера беремо лише величину
+    («Відвідуваність за тиждень впала на 10,3 в.п. (…)» → «відвідуваність ↓ 10,3 в.п.»), інакше — підсумок як є. */
+function shortSignal(it: AttentionItem): string {
+  if (it.anomaly_type === "ATTENDANCE_DROP") {
+    const pp = it.summary.match(/(\d+(?:[.,]\d+)?)\s*в\.\s?п\./);
+    return pp ? `відвідуваність ↓ ${pp[1]} в.п.` : "відвідуваність падає";
+  }
+  return it.summary;
+}
+
 /** Порівняння філій — головний робочий блок. Під кожним числом — смужка відносно найбільшої філії
     (відвідуваність — відносно 100 %), щоб різницю було видно без читання цифр.
     Клітинка відкриває той самий показник лише цієї філії, назва — «Огляд філії» в аналітиці мережі,
     а «Працювати у філії» змінює робочий контекст. */
-export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busyId, onOpen, onEnter }: Props) {
+export function BranchCompare({ rows, attention, attentionByTenant, loading, canEnter, busyId, onOpen, onEnter }: Props) {
   const withAttention = rows.map((r) => ({ ...r, attention: attentionByTenant[String(r.tenant_id)] ?? 0 }));
   const sort = useSort(withAttention, "students_total", "desc");
   const net = networkTotals(rows);
   const top = (key: keyof BranchRow) => Math.max(1, ...rows.map((r) => Number(r[key] ?? 0)));
   const max = { students: top("students_total"), fresh: top("students_new"), lessons: top("lessons_completed"), pay: top("payroll_uah") };
 
-  const meter = (value: number, of: number, cls = "") => (
-    <span className={`nd-meter${cls ? ` ${cls}` : ""}`} aria-hidden="true">
+  const meter = (value: number, of: number) => (
+    <span className="nd-meter" aria-hidden="true">
       <i style={{ width: `${Math.max(0, Math.min(100, Math.round((value / of) * 100)))}%` }} />
     </span>
   );
@@ -62,12 +77,14 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
               <tr><td colSpan={7}><div className="nd-empty">У вибраних немає активних філій</div></td></tr>
             )}
             {sort.sorted.map((r) => {
-              const signals = [
-                r.lessons_unmarked_overdue > 0 ? { text: `${formatNumber(r.lessons_unmarked_overdue)} не відмічено`, kind: "unmarked" as const } : null,
-                r.attendance_change_pp !== null && r.attendance_change_pp <= -5 ? { text: "відвідуваність падає", kind: "attendance" as const } : null,
-              ].filter(Boolean) as { text: string; kind: PanelKind }[];
-              // Сигнали періоду містять і кожен невідмічений урок окремо — їх уже показано числом вище.
-              const extra = Math.max(0, r.attention - r.lessons_unmarked_overdue - (signals.some((x) => x.kind === "attendance") ? 1 : 0));
+              // Невідмічені — числом із рядка філії; інші сигнали періоду — текстом (перший) і лічильником (решта).
+              // «Проблеми: 1» без суті — антипатерн із брифу §2, тож перший сигнал завжди названо.
+              const mine = attention.filter((it) => it.tenant_id === r.tenant_id);
+              const unmarkedItems = mine.filter((it) => it.anomaly_type === UNMARKED_LESSON).length;
+              const others = mine.filter((it) => it.anomaly_type !== UNMARKED_LESSON);
+              const first = others[0];
+              const extra = Math.max(others.length - 1, r.attention - unmarkedItems - (first ? 1 : 0), 0);
+              const calm = r.lessons_unmarked_overdue === 0 && !first && extra === 0;
               return (
                 <tr key={r.tenant_id}>
                   <th scope="row" data-label="Філія">
@@ -96,25 +113,31 @@ export function BranchCompare({ rows, attentionByTenant, loading, canEnter, busy
                   </td>
                   <td data-label="Відвідуваність">
                     {cell("attendance", r, "Відвідуваність", r.attendance_rate_pct === null ? <span className="nd-muted">немає занять</span> : (
-                      <><b>{formatPercent(r.attendance_rate_pct)}</b> <Delta value={r.attendance_change_pp} unit="pp" />{meter(r.attendance_rate_pct, 100, "att")}</>
+                      <><b>{formatPercent(r.attendance_rate_pct)}</b> <Delta value={r.attendance_change_pp} unit="pp" />{meter(r.attendance_rate_pct, 100)}</>
                     ))}
                   </td>
                   <td data-label="Нараховано">
                     {cell("payroll", r, "Нараховано зарплат", <><b>{formatCurrency(r.payroll_uah)} ₴</b>{meter(r.payroll_uah, max.pay)}</>)}
                   </td>
                   <td data-label="Увага">
-                    {signals.length === 0 && extra === 0 ? (
+                    {calm ? (
                       <span className="nd-calm">спокійно</span>
                     ) : (
                       <span className="nd-signals">
-                        {signals.map((s) => (
-                          <button key={s.kind} type="button" className={`nd-pill ${s.kind === "attendance" ? "risk" : "warn"}`} onClick={() => onOpen({ kind: s.kind, branch: r.tenant_id, scope: "period" })}>
-                            {s.text}
+                        {r.lessons_unmarked_overdue > 0 && (
+                          <button type="button" className="nd-pill warn" onClick={() => onOpen({ kind: "unmarked", branch: r.tenant_id, scope: "period" })}>
+                            {formatNumber(r.lessons_unmarked_overdue)} не відмічено
                           </button>
-                        ))}
+                        )}
+                        {first && (
+                          <button type="button" className={`nd-pill ${first.severity === "critical" || first.severity === "high" ? "risk" : "warn"}`}
+                            title={first.summary} onClick={() => onOpen({ kind: signalPanel(first.anomaly_type), branch: r.tenant_id, scope: "period" })}>
+                            {shortSignal(first)}
+                          </button>
+                        )}
                         {extra > 0 && (
                           <button type="button" className="nd-pill" onClick={() => onOpen({ kind: "attention", branch: r.tenant_id, scope: "period" })}>
-                            ще {formatNumber(extra)} {pluralUk(extra, "сигнал", "сигнали", "сигналів")}
+                            {first ? "ще " : ""}{formatNumber(extra)} {pluralUk(extra, "сигнал", "сигнали", "сигналів")}
                           </button>
                         )}
                       </span>

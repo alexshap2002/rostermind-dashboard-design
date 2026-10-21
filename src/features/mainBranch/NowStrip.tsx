@@ -7,8 +7,9 @@ import { countLessons, type Panel } from "./metrics";
 
 const SHOWN_OTHER = 2;
 
-/** «Потребує дії зараз»: що треба зробити вже — уся мережа, останні `days` днів, від обраного періоду не залежить.
-    Нумерований список коротких рядків; кожен відкриває свою вибірку в бічній панелі. */
+/** «На зараз» (підпис із брифу §3 Б): що відкрито вже — уся мережа, останні `days` днів, від обраного періоду
+    не залежить. Нумерований список коротких рядків — невідмічені, сигнали, «сьогодні за розкладом»;
+    кожен відкриває свою вибірку в бічній панелі. */
 export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: {
   today: MainBranchKpi | undefined;
   unmarked: AnomalyPage | undefined;
@@ -31,9 +32,10 @@ export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: 
   return (
     <section className="nd-act" aria-labelledby="nd-act-title">
       <div className="nd-sec-head">
-        <h2 id="nd-act-title">Потребує дії зараз</h2>
+        <h2 id="nd-act-title">На зараз</h2>
         <span>уся мережа · останні {formatNumber(days)} {pluralUk(days, "день", "дні", "днів")}</span>
-        {total > SHOWN_OTHER + 1 && (
+        {/* Посилання потрібне щойно хоч один «інший» сигнал не вміщається — рахуємо саме їх, не разом із невідміченими */}
+        {others.length > SHOWN_OTHER && (
           <button type="button" className="link nd-sec-link" onClick={() => onOpen({ kind: "attention", branch: null, scope: "now" })}>
             Переглянути всі ({formatNumber(total)})
           </button>
