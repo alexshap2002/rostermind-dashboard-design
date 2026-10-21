@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState, PageShell } from "../../components/admin/primitives";
 import { enterBranch, rememberNetworkUrl } from "../branches/api";
 import { ApiError, apiDownload } from "../../lib/api";
 import {
-  formatCurrency, formatDayMonth, formatNumber, formatPercent, formatRangeShort, pluralUk,
+  formatCurrency, formatDayMonth, formatNumber, formatPercent, formatRangeShort, formatUpdatedAt, pluralUk,
 } from "../../lib/format";
 import { DEMO } from "../../demo/mockApi";
-import { mainBranchExportUrl, mainBranchQueries, UNMARKED_LESSON, type MainBranchFilters, type MainBranchKpi } from "./api";
+import { mainBranchExportUrl, mainBranchQueries, type MainBranchFilters, type MainBranchKpi } from "./api";
 import { BranchCompare } from "./BranchCompare";
 import { ConsoleSidebar, type PeriodOption } from "./ConsoleSidebar";
 import { Delta, PANEL_KINDS, type Panel, type PanelKind } from "./metrics";
@@ -56,20 +56,26 @@ function humanRange(from: string, to: string): string {
   return `${DAY_MONTH.format(f)}${year(f)} – ${DAY_MONTH.format(t)}${year(t)}`;
 }
 
-/** Що з чим порівнюємо — словами, щоб «−2 в.п.» не виглядали загадкою. */
-function compareText(comparison: MainBranchKpi["comparison"], filters: MainBranchFilters): string {
+/** Що з чим порівнюємо — словами, щоб «−2 в.п.» не виглядали загадкою.
+    short — на екран («Порівняння з 10–28 вересня»), full — у підказку: які саме дні і чому без сьогодні. */
+function compareText(comparison: MainBranchKpi["comparison"], filters: MainBranchFilters): { short: string; full: string } {
   const cur = comparison.current_period;
   const prev = comparison.previous_period;
-  if (!cur || !prev) return "Сьогоднішній день ще триває — порівняємо завтра";
+  if (!cur || !prev) return { short: "Порівняємо завтра", full: "Сьогоднішній день ще триває — порівняємо завтра" };
   if (isFullMonth(cur.date_from, cur.date_to) && isFullMonth(prev.date_from, prev.date_to)) {
-    return `Порівнюємо з ${MONTH_WITH[utc(prev.date_from).getUTCMonth()]} ${utc(prev.date_from).getUTCFullYear()}`;
+    const month = `${MONTH_WITH[utc(prev.date_from).getUTCMonth()]} ${utc(prev.date_from).getUTCFullYear()}`;
+    return { short: `Порівняння з ${month}`, full: `Порівнюємо ${humanRange(cur.date_from, cur.date_to)} з ${month} — повний місяць до повного` };
   }
   const span = Math.round((utc(cur.date_to).getTime() - utc(cur.date_from).getTime()) / 86_400_000) + 1;
   const notes = [
     span < 28 ? "ті самі дні тижня" : null,
     cur.date_to.slice(0, 10) !== filters.dateTo ? "без сьогодні — день ще триває" : null,
   ].filter(Boolean);
-  return `Порівнюємо ${formatRangeShort(cur.date_from, cur.date_to)} з ${formatRangeShort(prev.date_from, prev.date_to)}${notes.length ? ` (${notes.join(", ")})` : ""}`;
+  const prevRange = humanRange(prev.date_from, prev.date_to);
+  return {
+    short: `Порівняння з ${prevRange}`,
+    full: `Порівнюємо ${humanRange(cur.date_from, cur.date_to)} з ${prevRange}${notes.length ? ` (${notes.join(", ")})` : ""}`,
+  };
 }
 
 type Preset = "today" | "week" | "month" | "prev" | "custom";
@@ -153,7 +159,9 @@ export function MainBranchPage() {
   const network = useQuery(mainBranchQueries.context());
   const [filters, setFilters] = useState<MainBranchFilters>(initial.filters);
   const [tab, setTab] = useState<Tab>(initial.tab ?? "lessons");
-  const [panel, setPanelState] = useState<Panel | null>(initial.panel);
+  const [panel, setPanel] = useState<Panel | null>(initial.panel);
+  // Чи розгорнуто «Детальні звіти»: в адресу пишемо tab лише тоді — інакше перезавантаження розгортало б їх само.
+  const [reportsOpen, setReportsOpen] = useState(initial.tab !== null);
   const [problemFilter, setProblemFilter] = useState<{ severity?: string; type?: string; cursor: number }>({ cursor: 0 });
   const [trendMode, setTrendMode] = useState<"daily" | "weekly" | null>(null);
   const [customOpen, setCustomOpen] = useState(false);
@@ -161,7 +169,6 @@ export function MainBranchPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const preset: Preset = customOpen ? "custom" : presetOf(filters);
-  const setPanel = useCallback((next: Panel | null) => setPanelState(next), []);
 
   // Стан сторінки (період, філії, вкладка, відкрита панель) живе в адресі: «Назад до мережі» повертає сюди ж.
   useEffect(() => {
@@ -169,7 +176,7 @@ export function MainBranchPage() {
     params.set("date_from", filters.dateFrom);
     params.set("date_to", filters.dateTo);
     for (const id of filters.branchIds) params.append("branch_ids", String(id));
-    params.set("tab", tab);
+    if (reportsOpen) params.set("tab", tab);
     if (panel) {
       params.set("panel", panel.kind);
       if (panel.branch !== null) params.set("panel_branch", String(panel.branch));
@@ -178,7 +185,7 @@ export function MainBranchPage() {
     const url = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, "", url);
     rememberNetworkUrl(url);
-  }, [filters.branchIds, filters.dateFrom, filters.dateTo, tab, panel]);
+  }, [filters.branchIds, filters.dateFrom, filters.dateTo, tab, reportsOpen, panel]);
 
   const datasets = useMemo(() => new Set(network.data?.capabilities.datasets ?? []), [network.data]);
   const enabled = (dataset: string) => Boolean(network.data && datasets.has(dataset));
@@ -196,7 +203,8 @@ export function MainBranchPage() {
   const periodAttention = useQuery({ ...mainBranchQueries.attention(filters), enabled: enabled("attention") });
   const attention = useQuery({ ...mainBranchQueries.attention(nowFilters), enabled: enabled("attention") });
   const todayKpi = useQuery({ ...mainBranchQueries.kpi(todayFilters), enabled: enabled("kpi") });
-  const unmarked = useQuery({ ...mainBranchQueries.anomalies(nowFilters, 0, 100, { type: UNMARKED_LESSON }), enabled: enabled("anomalies") });
+  // Невідмічені за 30 днів — з KPI (загалом і по філіях), а не з першої сторінки списку аномалій: чесні числа без пагінації.
+  const kpiNow = useQuery({ ...mainBranchQueries.kpi(nowFilters), enabled: enabled("kpi") });
 
   const activeBranches = (network.data?.branches ?? []).filter((b) => b.lifecycle_status === "active");
   const pendingCount = (network.data?.branches ?? []).filter((b) => b.lifecycle_status === "onboarding").length;
@@ -285,23 +293,21 @@ export function MainBranchPage() {
   const noCompare = Boolean(k && !k.comparison.previous_period);
   const attDelta = k?.comparison.attendance_rate_pct?.delta_percentage_points;
   const payDelta = k?.comparison.payroll_total_uah?.delta_percent;
-  const failed = [kpi, trends, attention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
-  const attentionByTenant = periodAttention.data?.totals.by_tenant ?? {};
+  const nowQueries = [todayKpi, kpiNow, attention];
+  const failed = [kpi, kpiAll, trends, attention, periodAttention, todayKpi, kpiNow].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
+  const kpiFailed = kpi.error instanceof ApiError;
+  const compare = k ? compareText(k.comparison, filters) : null;
   const open = (kind: PanelKind) => () => setPanel({ kind, branch: null, scope: "period" });
 
   // Пресети для бічної панелі: назва + справжні дати, щоб «Цей місяць» не був загадкою.
   const periods: PeriodOption[] = PRESETS.map((p) => {
     const r = presetRange(p.key);
     return {
-      key: p.key, label: p.label, range: p.key === "today" ? humanRange(r.dateFrom, r.dateTo) : humanRange(r.dateFrom, r.dateTo),
+      key: p.key, label: p.label, range: humanRange(r.dateFrom, r.dateTo),
       on: preset === p.key,
       onPick: () => { setCustomOpen(false); setRange(r); },
     };
   });
-  const unmarkedByTenant = (unmarked.data?.rows ?? []).reduce<Record<string, number>>((acc, r) => {
-    acc[String(r.tenant_id)] = (acc[String(r.tenant_id)] ?? 0) + 1;
-    return acc;
-  }, {});
 
   return (
     <PageShell
@@ -309,7 +315,7 @@ export function MainBranchPage() {
       subtitle={network.data
         ? [`${formatNumber(activeBranches.length)} ${pluralUk(activeBranches.length, "активна філія", "активні філії", "активних філій")}`,
            pendingCount ? `${pendingCount} ${pluralUk(pendingCount, "чекає", "чекають", "чекають")} оплати` : null,
-           "зведення по всіх філіях — розбивка й дії за кожним показником"].filter(Boolean).join(" · ")
+           k ? `оновлено ${formatUpdatedAt(k.generated_at)}` : kpiFailed ? "дані не оновлено" : "завантаження…"].filter(Boolean).join(" · ")
         : "Завантаження…"}
     >
       <div className="nd-page">
@@ -320,17 +326,19 @@ export function MainBranchPage() {
           <ConsoleSidebar
             periods={periods}
             custom={{ on: preset === "custom", dateFrom: filters.dateFrom, dateTo: filters.dateTo, onPick: () => setCustomOpen(true), onRange: setRange }}
+            summary={`${periodLabel} · ${branchesLabel}`}
             branches={activeBranches}
             selected={filters.branchIds}
             rowsAll={kpiAll.data?.branch_rows}
-            unmarkedByTenant={unmarkedByTenant}
+            allStudents={kpiAll.data?.students_total}
             onToggleBranch={toggleBranch}
             onAllBranches={() => setFilters((f) => ({ ...f, refresh: false, branchIds: [] }))}
             now={{
-              today: todayKpi.data, unmarked: unmarked.data, attention: attention.data, days: NOW_DAYS,
-              loading: todayKpi.isLoading || unmarked.isLoading || attention.isLoading, onOpen: setPanel,
+              today: todayKpi.data, recent: kpiNow.data, attention: attention.data, days: NOW_DAYS,
+              loading: nowQueries.some((q) => q.isLoading),
+              failed: nowQueries.some((q) => q.error instanceof ApiError),
+              onOpen: setPanel,
             }}
-            updatedAt={k?.generated_at}
             onRefresh={onRefresh}
             canExport={Boolean(network.data?.capabilities.can_export_full_report)}
             downloading={downloading}
@@ -349,10 +357,11 @@ export function MainBranchPage() {
             {/* ── Контекст і основні показники за період ── */}
             <div className="nd-main-head">
               <h3>{periodLabel} · {branchesLabel}</h3>
-              {k && <span className="nd-compare" title="Як рахуємо зміну">{compareText(k.comparison, filters)}</span>}
+              {/* Коротко на екрані, деталі (які дні, чому без сьогодні) — у підказці й для читача екрана. */}
+              {compare && <span className="nd-compare" title={compare.full}>{compare.short}<span className="sr-only">. {compare.full}</span></span>}
             </div>
             <div className="nd-kpis">
-              <Kpi label="Діти в базі" loading={!k} onOpen={open("students")}
+              <Kpi label="Діти в базі" loading={kpi.isLoading} failed={kpiFailed} onOpen={open("students")}
                 value={k ? formatNumber(k.students_total) : ""}
                 extra={k && (
                   <button type="button" className="nd-kpi-chip" onClick={open("new")}>
@@ -360,7 +369,7 @@ export function MainBranchPage() {
                   </button>
                 )}
                 sub="поточна база на кінець періоду" />
-              <Kpi label="Проведено занять" loading={!k} onOpen={open("lessons")}
+              <Kpi label="Проведено занять" loading={kpi.isLoading} failed={kpiFailed} onOpen={open("lessons")}
                 value={k ? <>{formatNumber(k.lessons_completed)}<small> з {formatNumber(k.lessons_scheduled)}</small></> : ""}
                 extra={k && (
                   <span className="nd-kpi-status">
@@ -371,11 +380,11 @@ export function MainBranchPage() {
                   </span>
                 )}
                 sub="навчальні заняття з відміткою" />
-              <Kpi label="Відвідуваність" loading={!k} onOpen={open("attendance")}
+              <Kpi label="Відвідуваність" loading={kpi.isLoading} failed={kpiFailed} onOpen={open("attendance")}
                 value={k ? (k.attendance_has_data ? formatPercent(k.attendance_rate_pct) : "—") : ""}
                 sub={k ? (!k.attendance_has_data ? "занять з дітьми не було" : noCompare ? "порівняємо завтра — день ще триває"
                   : attDelta === null || attDelta === undefined ? "немає з чим порівняти" : <><Delta value={attDelta} unit="pp" /> до попереднього періоду</>) : null} />
-              <Kpi label="Нараховано зарплат" loading={!k} onOpen={open("payroll")}
+              <Kpi label="Нараховано зарплат" loading={kpi.isLoading} failed={kpiFailed} onOpen={open("payroll")}
                 value={k ? `${formatCurrency(k.payroll_total_uah)} ₴` : ""}
                 sub={k ? (noCompare ? "порівняємо завтра — день ще триває"
                   : payDelta === null || payDelta === undefined ? "немає з чим порівняти" : <><Delta value={payDelta} unit="pct" tone="neutral" /> до попереднього періоду</>) : null} />
@@ -391,11 +400,11 @@ export function MainBranchPage() {
             {/* ── Філії ── */}
             <div className="nd-section-head">
               <h3>Філії</h3>
-              <span className="nd-hint">Назва — огляд філії тут; «Працювати у філії» — перейти в її роботу; число — розбивка цього показника</span>
+              <span className="nd-hint">Число в рядку — розбивка показника по філії</span>
             </div>
             <BranchCompare
               rows={k?.branch_rows ?? []}
-              attentionByTenant={attentionByTenant}
+              attention={periodAttention.data?.items ?? []}
               loading={kpi.isLoading}
               canEnter={canEnter}
               busyId={busyId}
@@ -407,14 +416,14 @@ export function MainBranchPage() {
             )}
 
             {/* ── Динаміка ── */}
-            <section className="nd-card nd-trend">
+            <section className="nd-card">
               <div className="nd-card-head">
                 <div>
                   <h3>Динаміка за період</h3>
                   <p>{span < 7 ? "Для динаміки оберіть щонайменше тиждень" : mode === "daily" ? "по днях" : "по тижнях"}</p>
                 </div>
                 {span >= 7 && (
-                  <div className="nd-seg sm" role="radiogroup" aria-label="Крок графіка">
+                  <div className="nd-seg" role="radiogroup" aria-label="Крок графіка">
                     <button type="button" role="radio" aria-checked={mode === "daily"} className={mode === "daily" ? "on" : ""} onClick={() => setTrendMode("daily")}>По днях</button>
                     <button type="button" role="radio" aria-checked={mode === "weekly"} className={mode === "weekly" ? "on" : ""} onClick={() => setTrendMode("weekly")}>По тижнях</button>
                   </div>
@@ -424,7 +433,7 @@ export function MainBranchPage() {
             </section>
 
             {/* ── Детальні звіти ── */}
-            <details className="nd-details" open={initial.tab !== null}>
+            <details className="nd-details" open={reportsOpen} onToggle={(e) => setReportsOpen(e.currentTarget.open)}>
               <summary><h3>Детальні звіти</h3><span>заняття, гуртки, відвідуваність, зарплати, сигнали — за обраний період</span></summary>
               <ReportTabs
                 tab={tab}
@@ -466,16 +475,18 @@ export function MainBranchPage() {
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
-/** Клікабельний показник: уся картка — кнопка з видимим «Переглянути»; додаткові дії — окремими кнопками поруч. */
-function Kpi({ label, value, sub, extra, loading, onOpen }: {
-  label: string; value: ReactNode; sub?: ReactNode; extra?: ReactNode; loading: boolean; onOpen: () => void;
+/** Клікабельний показник: уся картка — кнопка з видимим «Переглянути»; додаткові дії — окремими кнопками поруч.
+    Ім'я кнопки складається з її вмісту (підпис, число, зміна) — без aria-label, який ховав би числа від читача екрана.
+    failed — дані не завантажено: «—» і підпис, а не скелетон назавжди. */
+function Kpi({ label, value, sub, extra, loading, failed, onOpen }: {
+  label: string; value: ReactNode; sub?: ReactNode; extra?: ReactNode; loading: boolean; failed: boolean; onOpen: () => void;
 }) {
   return (
     <div className="nd-kpi">
-      <button type="button" className="nd-kpi-main" onClick={onOpen} aria-label={`${label}: переглянути по філіях`}>
+      <button type="button" className="nd-kpi-main" onClick={onOpen}>
         <span className="nd-kpi-label">{label}</span>
-        {loading ? <span className="nd-skel" style={{ width: 120, height: 32 }} /> : <span className="nd-kpi-value">{value}</span>}
-        {sub && <span className="nd-kpi-sub">{sub}</span>}
+        {loading ? <span className="nd-skel" style={{ width: 120, height: 32 }} /> : <span className="nd-kpi-value">{failed ? "—" : value}</span>}
+        {failed ? <span className="nd-kpi-sub">не завантажено</span> : sub && <span className="nd-kpi-sub">{sub}</span>}
         <span className="nd-kpi-go">Переглянути по філіях →</span>
       </button>
       {extra && <div className="nd-kpi-extra">{extra}</div>}

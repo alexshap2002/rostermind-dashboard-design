@@ -42,22 +42,33 @@ interface Props {
 
 export function MetricPanel(props: Props) {
   const { panel, onPanel } = props;
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  // Нативний модальний <dialog>: фокус не виходить за панель, Escape закриває, решта сторінки — inert.
+  // Після закриття фокус повертається туди, звідки панель відкрили (клітинка таблиці, KPI, сигнал).
   useEffect(() => {
+    const dialog = dialogRef.current;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (dialog && !dialog.open) dialog.showModal();
     closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onPanel(null); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onPanel]);
+    // Не викликаємо dialog.close() тут: подія close знову закрила б панель під час подвійного ефекту StrictMode,
+    // а вилучення <dialog> зі сторінки й так знімає його з верхнього шару.
+    return () => { opener?.focus(); };
+  }, []);
 
   const rowsAll = (panel.kind === "today" ? props.todayKpi : props.kpi)?.branch_rows ?? [];
   const branchName = panel.branch !== null ? rowsAll.find((r) => r.tenant_id === panel.branch)?.tenant_name : undefined;
   const scopeLabel = panel.kind === "today" ? "сьогодні" : panel.scope === "now" ? props.nowLabel : props.periodLabel;
 
   return (
-    <div className="nd-drawer-wrap">
-      <button type="button" className="nd-scrim" aria-label="Закрити панель" onClick={() => onPanel(null)} />
-      <aside className="nd-drawer" role="dialog" aria-modal="true" aria-labelledby="nd-drawer-title">
+    <dialog
+      ref={dialogRef}
+      className="nd-drawer"
+      aria-labelledby="nd-drawer-title"
+      onClose={() => onPanel(null)}
+      // Клік по затемненню (::backdrop) приходить на сам <dialog>, а не на його вміст.
+      onClick={(e) => { if (e.target === e.currentTarget) onPanel(null); }}
+    >
         <header className="nd-drawer-head">
           <div>
             <div className="nd-eyebrow">{scopeLabel}</div>
@@ -73,8 +84,7 @@ export function MetricPanel(props: Props) {
         <div className="nd-drawer-body">
           <PanelBody {...props} rowsAll={rowsAll} branchName={branchName} />
         </div>
-      </aside>
-    </div>
+    </dialog>
   );
 }
 
