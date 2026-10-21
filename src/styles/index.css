@@ -1288,6 +1288,16 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 /* ── Варіант 3: Картки філій (дашборд власника, бриф 19.10.2026) ──
    Ідея: власник мислить філіями. Мережа — компактна зведена стрічка зверху,
    головний блок — картка на кожну філію з тими самими показниками й переходами. */
+/* Токени варіанту: заливки й лінії, яких бракує в :root (кольори — лише через var()) */
+:root {
+  --surface-2: #faf6ef;   /* фон при наведенні, шапка таблиці */
+  --fill-muted: #ece5d8;  /* нейтральні пігулки, смужки, перемикач періоду */
+  --line-strong: #cfc2ad; /* рамка при наведенні */
+  --terra-line: #e7c3b4;  /* підкреслення й рамка акцентного чипа */
+  --chart-bar: #c9b9a2; --chart-bar-on: #9f8b70; --chart-cross: #b9ab96; /* стовпчики й курсор графіка */
+}
+/* Підзаголовок сторінки лежить на фоні сторінки: --text-3 там дає 4,29:1, --text-2 — 6,4:1 */
+.content:has(.nd-page) .page-head p { color: var(--text-2); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .nd-page { display: flex; flex-direction: column; gap: 14px; }
 /* Діти флекс-колонки не ширші за сторінку: широка таблиця прокручується всередині своєї картки */
@@ -1295,7 +1305,7 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 .nd-demo { background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 8px 14px; font-size: 13px; }
 .nd-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--info-soft); color: var(--info-text); border-radius: var(--r-md); padding: 10px 8px 10px 14px; font-size: 14px; }
 .nd-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
-.nd-skel { display: inline-block; height: 18px; border-radius: 6px; background: linear-gradient(90deg, #efe8dc, #f7f2ea, #efe8dc); background-size: 200% 100%; animation: nd-shimmer 1.2s linear infinite; }
+.nd-skel { display: inline-block; height: 18px; border-radius: 6px; background: linear-gradient(90deg, var(--fill-muted), var(--surface-2), var(--fill-muted)); background-size: 200% 100%; animation: nd-shimmer 1.2s linear infinite; }
 @keyframes nd-shimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .nd-skel { animation: none; } }
 .nd-empty { padding: 20px; color: var(--text-3); font-size: 14px; }
@@ -1304,20 +1314,20 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 /* Панель контексту */
 .nd-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .nd-spacer { flex: 1; }
-.nd-seg { display: inline-flex; background: #ece5d8; border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.nd-seg { display: inline-flex; background: var(--fill-muted); border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
 .nd-seg button { border: none; background: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--text-2); padding: 8px 14px; min-height: 38px; border-radius: 8px; cursor: pointer; }
 .nd-seg button:hover { color: var(--text); background: rgba(255,255,255,.5); }
 .nd-seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(38,32,25,.12); }
 .nd-seg.sm button { font-size: 13px; padding: 6px 12px; min-height: 34px; }
 .nd-dates { display: inline-flex; gap: 8px; }
-.nd-dates label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-3); }
+.nd-dates label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
 .nd-dates input { font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); min-height: 40px; }
 .nd-dd { position: relative; }
 .nd-dd-btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; min-height: 40px; cursor: pointer; }
-.nd-dd-btn:hover { border-color: #d6cab6; }
+.nd-dd-btn:hover { border-color: var(--line-strong); }
 .nd-dd-menu { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 220px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(38,32,25,.14); padding: 6px; }
 .nd-check { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 14px; cursor: pointer; min-height: 40px; }
-.nd-check:hover { background: #f5efe4; }
+.nd-check:hover { background: var(--surface-2); }
 .nd-check input { width: 16px; height: 16px; accent-color: var(--terra); }
 
 /* Зведена стрічка мережі: чотири показники в один рядок, розділені тонкими лініями */
@@ -1328,7 +1338,7 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 .nd-stat { display: flex; flex-direction: column; min-width: 0; border-left: 1px solid var(--line); }
 .nd-stat:first-child { border-left: none; }
 .nd-stat-main { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 10px 14px 6px; cursor: pointer; border-radius: 10px; width: 100%; }
-.nd-stat-main:hover { background: #faf6ef; }
+.nd-stat-main:hover { background: var(--surface-2); }
 .nd-stat-main:hover .nd-stat-go { color: var(--terra-deep); text-decoration: underline; }
 .nd-stat-label { font-size: 13.5px; font-weight: 600; color: var(--text-2); }
 .nd-stat-value { font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
@@ -1336,24 +1346,27 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 .nd-stat-sub { font-size: 13px; color: var(--text-3); }
 .nd-stat-go { font-size: 12.5px; font-weight: 600; color: var(--terra-deep); margin-top: 2px; }
 .nd-stat-extra { padding: 0 14px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-.nd-chip-new { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ok-text); background: var(--ok-soft); border: none; border-radius: 99px; padding: 4px 10px; min-height: 28px; cursor: pointer; }
-.nd-chip-new.zero { color: var(--text-2); background: #ece5d8; }
+/* «+N нових» — це дія (перехід до розбивки), тому форма кнопки: 36 px, радіус 8 px; пігулки лишаються статусам */
+.nd-chip-new { font: inherit; font-size: 13px; font-weight: 600; color: var(--ok-text); background: var(--ok-soft); border: none; border-radius: 8px; padding: 6px 12px; min-height: 36px; cursor: pointer; }
+.nd-chip-new.zero { color: var(--text-2); background: var(--fill-muted); }
 .nd-chip-new:hover { text-decoration: underline; }
 
 /* На зараз: один рядок сигналів, кожен — кнопка до своєї вибірки */
 .nd-now { display: flex; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; padding: 0 2px; }
 .nd-now-head { display: flex; flex-direction: column; flex-shrink: 0; min-width: 120px; padding-top: 4px; }
 .nd-now-head h3 { font-size: 14.5px; font-weight: 700; line-height: 1.3; }
-.nd-now-head span { font-size: 12.5px; color: var(--text-3); }
+.nd-now-head span { font-size: 12.5px; color: var(--text-2); }
 .nd-now-items { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; min-width: 0; }
 .nd-now-all { font-size: 13px; padding: 8px 4px; }
 .nd-signal { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 13.5px; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; min-height: 40px; text-align: left; cursor: pointer; max-width: 100%; }
-button.nd-signal:hover { border-color: #cfc2ad; background: #faf6ef; }
+button.nd-signal:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .nd-signal svg { width: 16px; height: 16px; }
 .nd-signal b { font-weight: 700; }
-.nd-signal-sub { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
+/* Текст сигналу тече одним реченням (і на вузьких екранах), тег і стрілка — окремі флекс-елементи */
+.nd-signal-text { flex: 1 1 auto; min-width: 0; }
+.nd-signal-sub { color: var(--text-2); }
 .nd-signal-go { color: var(--text-3); margin-left: 2px; }
-.nd-signal-tag { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: #ece5d8; color: var(--text-2); }
+.nd-signal-tag { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: var(--fill-muted); color: var(--text-2); }
 .nd-signal.warn .nd-signal-tag { background: var(--warn-soft); color: var(--warn-text); }
 .nd-signal.risk .nd-signal-tag { background: var(--risk-soft); color: var(--risk-text); }
 .nd-signal.info .nd-signal-tag { background: var(--info-soft); color: var(--info-text); }
@@ -1363,13 +1376,15 @@ button.nd-signal:hover { border-color: #cfc2ad; background: #faf6ef; }
 /* Заголовок секції */
 .nd-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; margin-top: 4px; }
 .nd-section-head h3 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
-.nd-compare, .nd-hint { font-size: 13px; color: var(--text-3); }
-.nd-aux { font-size: 13px; color: var(--text-3); margin-top: -6px; }
+.nd-compare { font-size: 13px; color: var(--text-3); }
+/* Підпис секції й допоміжний рядок лежать на фоні сторінки — --text-2, щоб контраст був ≥ 4,5:1 */
+.nd-hint, .nd-aux { font-size: 13px; color: var(--text-2); }
+.nd-aux { margin-top: -6px; }
 
 /* Картки філій — головний блок */
 .nd-bcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
 .nd-bcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); display: flex; flex-direction: column; min-width: 0; transition: border-color .15s, box-shadow .15s; }
-.nd-bcard:hover { border-color: #cfc2ad; box-shadow: var(--shadow-hover); }
+.nd-bcard:hover { border-color: var(--line-strong); box-shadow: var(--shadow-hover); }
 .nd-bcard-skel { padding: 18px; gap: 14px; }
 .nd-bcard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 16px 18px 12px; }
 .nd-bcard-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -1378,9 +1393,10 @@ button.nd-signal:hover { border-color: #cfc2ad; background: #faf6ef; }
 .nd-bcard-name:hover .nd-bcard-hint { text-decoration: underline; }
 .nd-bcard-meta { font-size: 12.5px; color: var(--text-3); }
 .nd-bcard-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; flex-shrink: 0; max-width: 55%; }
-.nd-badge { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: #ece5d8; color: var(--text-2); border: none; white-space: nowrap; }
+.nd-badge { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: var(--fill-muted); color: var(--text-2); border: none; white-space: nowrap; }
 .nd-badge svg { width: 14px; height: 14px; stroke-width: 2.4; }
-button.nd-badge { cursor: pointer; }
+/* Бейдж-дія (відкриває вибірку) — форма кнопки, бейдж-стан — пігулка */
+button.nd-badge { cursor: pointer; border-radius: 8px; padding: 6px 12px; min-height: 36px; font-size: 13px; }
 button.nd-badge:hover { text-decoration: underline; }
 .nd-badge.ok { background: var(--ok-soft); color: var(--ok-text); }
 .nd-badge.warn { background: var(--warn-soft); color: var(--warn-text); }
@@ -1389,29 +1405,34 @@ button.nd-badge:hover { text-decoration: underline; }
 .nd-metric { display: flex; flex-direction: column; min-width: 0; border-bottom: 1px solid var(--line); }
 .nd-metric:nth-child(odd) { border-right: 1px solid var(--line); }
 .nd-metric-main { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 12px 16px 6px; cursor: pointer; width: 100%; flex: 1; }
-.nd-metric-main:hover { background: #faf6ef; }
-.nd-metric-main:hover .nd-metric-label { color: var(--terra-deep); text-decoration: underline; text-decoration-color: #e7c3b4; }
+.nd-metric-main:hover { background: var(--surface-2); }
+.nd-metric-main:hover .nd-metric-label { color: var(--terra-deep); text-decoration: underline; text-decoration-color: var(--terra-line); }
 .nd-metric-label { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
-.nd-metric-label::after { content: " →"; color: var(--text-4); }
-.nd-metric-main:hover .nd-metric-label::after { color: var(--terra-deep); }
+/* Стрілка-афорданс «переглянути»: --text-3 (4,8:1), щоб її було видно й без наведення */
+.nd-metric-go { color: var(--text-3); }
+.nd-metric-main:hover .nd-metric-go { color: var(--terra-deep); }
 .nd-metric-value { font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .nd-metric-value small { font-size: 14px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
 .nd-metric-sub { font-size: 12.5px; color: var(--text-3); }
 .nd-metric-extra { padding: 0 16px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 40px; }
+.nd-spark-wrap { display: inline-flex; align-items: stretch; gap: 6px; }
 .nd-spark { display: block; overflow: visible; }
+.nd-spark-axis { stroke: var(--line); stroke-width: 1; }
 .nd-spark-line { fill: none; stroke: var(--info-text); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .nd-spark-dot { fill: var(--info-text); }
+/* Межі шкали спарклайна — міні-вісь, щоб лінію читали чесно (повний текст — у підказці) */
+.nd-spark-scale { display: flex; flex-direction: column; justify-content: space-between; font-size: 12px; line-height: 1; color: var(--text-3); font-variant-numeric: tabular-nums; padding: 1px 0; white-space: nowrap; }
 .nd-spark-none { font-size: 12.5px; color: var(--text-3); }
 .nd-bcard-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px 14px; margin-top: auto; }
 .nd-share { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
-.nd-share-bar { display: block; height: 5px; border-radius: 99px; background: #ece5d8; overflow: hidden; max-width: 180px; }
+.nd-share-bar { display: block; height: 5px; border-radius: 99px; background: var(--fill-muted); overflow: hidden; max-width: 180px; }
 .nd-share-bar i { display: block; height: 100%; background: var(--text-3); border-radius: 99px; }
 .nd-share-text { font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
 .nd-bcard-work { min-height: 40px; white-space: nowrap; }
 
 /* Пігулки статусів */
-.nd-pill { display: inline-flex; align-items: center; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: #ece5d8; color: var(--text-2); border: none; }
-button.nd-pill { cursor: pointer; }
+.nd-pill { display: inline-flex; align-items: center; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: var(--fill-muted); color: var(--text-2); border: none; }
+button.nd-pill { cursor: pointer; border-radius: 8px; padding: 6px 12px; min-height: 36px; font-size: 13px; }
 button.nd-pill:hover { text-decoration: underline; }
 .nd-pill.warn { background: var(--warn-soft); color: var(--warn-text); }
 .nd-pill.risk { background: var(--risk-soft); color: var(--risk-text); }
@@ -1426,15 +1447,18 @@ button.nd-pill:hover { text-decoration: underline; }
 /* Таблиця порівняння філій (запасний вигляд рядками) */
 /* position: relative — щоб .sr-only усередині таблиці не розтягував сторінку за край прокрутки */
 .nd-table-scroll { overflow-x: auto; position: relative; }
+/* Тінь на правому краю, коли колонки сховані за прокруткою (клас shade-r ставить useScrollShades) */
+.nd-branches { position: relative; }
+.nd-branches:has(> .nd-table-scroll.shade-r)::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 36px; pointer-events: none; background: linear-gradient(to right, rgba(38,32,25,0), rgba(38,32,25,.09)); }
 .nd-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .nd-table th, .nd-table td { padding: 11px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
-.nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; background: #faf6ef; }
+.nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; background: var(--surface-2); }
 .nd-table thead th:first-child { border-top-left-radius: var(--r-lg); }
 .nd-table thead th:last-child { border-top-right-radius: var(--r-lg); }
 .nd-table .r { text-align: right; }
 .nd-table td.r, .nd-table th.r { font-variant-numeric: tabular-nums; }
-.nd-table tbody tr:hover { background: #fbf8f2; }
-.nd-table tfoot th, .nd-table tfoot td, .nd-table .nd-total th, .nd-table .nd-total td { font-weight: 700; background: #faf6ef; border-bottom: none; }
+.nd-table tbody tr:hover { background: var(--surface-2); }
+.nd-table tfoot th, .nd-table tfoot td, .nd-table .nd-total th, .nd-table .nd-total td { font-weight: 700; background: var(--surface-2); border-bottom: none; }
 .nd-table.compact th, .nd-table.compact td { padding: 9px 10px; font-size: 13.5px; }
 .nd-table .th-sort { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-3); background: none; border: none; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; padding: 4px 0; }
 .nd-table .th-sort.on { color: var(--text); }
@@ -1444,13 +1468,12 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-branch-hint { font-size: 12px; font-weight: 500; color: var(--terra-deep); }
 .nd-branch-name:hover .nd-branch-hint { text-decoration: underline; }
 .nd-cell { font: inherit; color: inherit; background: none; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; margin: -6px -8px; cursor: pointer; text-align: inherit; font-variant-numeric: tabular-nums; }
-.nd-cell:hover { border-color: var(--line); background: var(--surface); text-decoration: underline; text-decoration-color: #cfc2ad; }
+.nd-cell:hover { border-color: var(--line); background: var(--surface); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .nd-cell.warn { color: var(--warn-text); font-weight: 700; }
 .nd-stack { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .nd-of { color: var(--text-3); font-weight: 500; }
 .nd-signals { display: flex; flex-wrap: wrap; gap: 6px; }
-.nd-calm { color: var(--text-4); }
-.nd-act { text-align: right; white-space: nowrap; }
+.nd-calm { color: var(--text-3); }
 /* Таблиця всередині розгортки: без другої рамки */
 .nd-details .nd-branches { border: none; border-radius: 0; }
 .nd-details .nd-table thead th { background: transparent; border-radius: 0; border-top: 1px solid var(--line); }
@@ -1467,15 +1490,15 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-legend { display: flex; gap: 16px; font-size: 13px; color: var(--text-2); padding: 6px 0 4px; }
 .nd-key { display: inline-block; vertical-align: middle; margin-right: 6px; }
 .nd-key.line { width: 18px; height: 3px; border-radius: 2px; background: var(--info-text); }
-.nd-key.bar { width: 10px; height: 12px; border-radius: 2px; background: #c9b9a2; }
+.nd-key.bar { width: 10px; height: 12px; border-radius: 2px; background: var(--chart-bar); }
 .nd-grid { stroke: var(--line); stroke-width: 1; }
 .nd-axis { font-size: 12px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
 .nd-line { fill: none; stroke: var(--info-text); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
 .nd-dot { fill: var(--info-text); stroke: var(--surface); stroke-width: 2; }
-.nd-bar { fill: #c9b9a2; }
-.nd-bar.on { fill: #9f8b70; }
-.nd-cross { stroke: #b9ab96; stroke-dasharray: 3 3; }
-.nd-tip { position: absolute; top: 6px; transform: translateX(-50%); background: var(--ink); color: #f4efe7; border-radius: 10px; padding: 8px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; white-space: nowrap; z-index: 2; }
+.nd-bar { fill: var(--chart-bar); }
+.nd-bar.on { fill: var(--chart-bar-on); }
+.nd-cross { stroke: var(--chart-cross); stroke-dasharray: 3 3; }
+.nd-tip { position: absolute; top: 6px; transform: translateX(-50%); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 8px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; white-space: nowrap; z-index: 2; }
 .nd-table-alt { margin-top: 10px; font-size: 13px; }
 .nd-table-alt summary { cursor: pointer; color: var(--terra-deep); font-weight: 600; padding: 6px 0; }
 
@@ -1500,9 +1523,9 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-drawer-head h3 { font-size: 20px; font-weight: 700; margin: 2px 0 6px; }
 .nd-eyebrow { font-size: 12.5px; color: var(--text-3); }
 .nd-chip { font: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 99px; padding: 5px 12px; min-height: 32px; cursor: pointer; }
-.nd-chip.on { background: var(--terra-soft); border-color: #e7c3b4; color: var(--terra-deep); }
+.nd-chip.on { background: var(--terra-soft); border-color: var(--terra-line); color: var(--terra-deep); }
 .nd-icon-btn { width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: none; background: none; border-radius: 10px; color: var(--text-2); cursor: pointer; font-size: 16px; }
-.nd-icon-btn:hover { background: #f1eadf; color: var(--text); }
+.nd-icon-btn:hover { background: var(--fill-muted); color: var(--text); }
 .nd-icon-btn svg { width: 18px; height: 18px; }
 .nd-drawer-body { overflow-y: auto; padding: 16px 20px 28px; display: flex; flex-direction: column; gap: 14px; }
 .nd-note { font-size: 13.5px; color: var(--text-2); line-height: 1.5; }
@@ -1516,7 +1539,7 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-list li b { color: var(--text); font-size: 14.5px; }
 .nd-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .nd-mini { display: flex; flex-direction: column; gap: 2px; text-align: left; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; cursor: pointer; }
-.nd-mini:hover { border-color: #cfc2ad; }
+.nd-mini:hover { border-color: var(--line-strong); }
 .nd-mini-label { font-size: 13px; color: var(--text-2); font-weight: 600; }
 .nd-mini-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .nd-mini-sub { font-size: 12.5px; color: var(--text-3); }
@@ -1551,7 +1574,12 @@ button.nd-pill:hover { text-decoration: underline; }
   .nd-bcard-badges { justify-content: flex-start; max-width: none; }
   .nd-bcard-foot { flex-direction: column; align-items: stretch; }
   .nd-share-bar { max-width: none; }
-  /* Таблиця філій → картки з тими самими полями й переходами */
+  /* Примітка про методику порівняння — лише для скрінрідера (і в підказці), щоб не займати два рядки */
+  .nd-compare-note { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .nd-mini-grid { grid-template-columns: 1fr; }
+}
+/* Таблиця філій → список з тими самими полями й переходами; поріг 940 px — нижче таблиця вже не вміщається без прокрутки */
+@media (max-width: 940px) {
   .nd-branches .nd-table thead { display: none; }
   .nd-branches .nd-table, .nd-branches .nd-table tbody, .nd-branches .nd-table tfoot, .nd-branches .nd-table tr { display: block; }
   .nd-branches .nd-table tr { padding: 12px 14px; border-bottom: 1px solid var(--line); }
@@ -1559,6 +1587,4 @@ button.nd-pill:hover { text-decoration: underline; }
   .nd-branches .nd-table td::before, .nd-branches .nd-table tfoot th::before { content: attr(data-label); font-size: 13px; color: var(--text-3); text-align: left; }
   .nd-branches .nd-table tbody th { padding-bottom: 8px; }
   .nd-branches .nd-table td:empty { display: none; }
-  .nd-branches .nd-act { justify-content: flex-start; }
-  .nd-mini-grid { grid-template-columns: 1fr; }
 }

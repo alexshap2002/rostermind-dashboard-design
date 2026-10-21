@@ -44,15 +44,22 @@ export function MetricPanel(props: Props) {
   const { panel, onPanel } = props;
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
+    // Запам'ятовуємо, звідки відкрили, і повертаємо фокус туди після закриття (Escape, хрестик, клік поза панеллю).
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onPanel(null); };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (opener && document.contains(opener)) opener.focus();
+    };
   }, [onPanel]);
 
   const rowsAll = (panel.kind === "today" ? props.todayKpi : props.kpi)?.branch_rows ?? [];
   const branchName = panel.branch !== null ? rowsAll.find((r) => r.tenant_id === panel.branch)?.tenant_name : undefined;
   const scopeLabel = panel.kind === "today" ? "сьогодні" : panel.scope === "now" ? props.nowLabel : props.periodLabel;
+  // Звідки відкрили: «Огляд філії · період» — щоб шапка відповідала натиснутому «Огляд філії →».
+  const eyebrow = panel.kind === "branch" ? `${TITLES.branch} · ${scopeLabel}` : scopeLabel;
 
   return (
     <div className="nd-drawer-wrap">
@@ -60,7 +67,7 @@ export function MetricPanel(props: Props) {
       <aside className="nd-drawer" role="dialog" aria-modal="true" aria-labelledby="nd-drawer-title">
         <header className="nd-drawer-head">
           <div>
-            <div className="nd-eyebrow">{scopeLabel}</div>
+            <div className="nd-eyebrow">{eyebrow}</div>
             <h3 id="nd-drawer-title">{panel.kind === "branch" ? branchName ?? "Філія" : TITLES[panel.kind]}</h3>
             {panel.branch !== null && panel.kind !== "branch" && (
               <button type="button" className="nd-chip on" onClick={() => onPanel({ ...panel, branch: null })}>

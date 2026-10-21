@@ -2,7 +2,7 @@ import { formatNumber, pluralUk } from "../../lib/format";
 import { IconCheck } from "../../lib/icons";
 import type { AnomalyPage, AttentionReport, MainBranchKpi } from "./api";
 import { UNMARKED_LESSON } from "./api";
-import { countLessons, type Panel } from "./metrics";
+import { countLessons, signalPanelKind, signalTone, type Panel } from "./metrics";
 
 const SHOWN_OTHER = 2;
 
@@ -35,8 +35,10 @@ export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: 
           {unmarkedTotal > 0 ? (
             <button type="button" className="nd-signal warn" onClick={() => onOpen({ kind: "unmarked", branch: null, scope: "now" })}>
               <span className="nd-signal-tag">Увага</span>
-              <b>{countLessons(unmarkedTotal)} не відмічено</b>
-              <span className="nd-signal-sub">· {formatNumber(unmarkedBranches)} {pluralUk(unmarkedBranches, "філія", "філії", "філій")}</span>
+              <span className="nd-signal-text">
+                <b>{countLessons(unmarkedTotal)} не відмічено</b>
+                <span className="nd-signal-sub"> · {formatNumber(unmarkedBranches)} {pluralUk(unmarkedBranches, "філія", "філії", "філій")}</span>
+              </span>
               <span className="nd-signal-go" aria-hidden="true">→</span>
             </button>
           ) : (
@@ -46,19 +48,23 @@ export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: 
             <button
               key={i}
               type="button"
-              className={`nd-signal ${it.severity === "critical" || it.severity === "high" ? "risk" : "warn"}`}
-              onClick={() => onOpen({ kind: "attendance", branch: it.tenant_id, scope: "now" })}
+              className={`nd-signal ${signalTone(it)}`}
+              onClick={() => onOpen({ kind: signalPanelKind(it), branch: it.tenant_id, scope: "now" })}
             >
-              <span className="nd-signal-tag">{it.severity === "critical" || it.severity === "high" ? "Ризик" : "Увага"}</span>
-              <b>{it.tenant_name}</b>
-              <span className="nd-signal-sub">· {it.summary}</span>
+              <span className="nd-signal-tag">{signalTone(it) === "risk" ? "Ризик" : "Увага"}</span>
+              <span className="nd-signal-text">
+                <b>{it.tenant_name}</b>
+                <span className="nd-signal-sub"> · {it.summary}</span>
+              </span>
               <span className="nd-signal-go" aria-hidden="true">→</span>
             </button>
           ))}
           <button type="button" className="nd-signal info" onClick={() => onOpen({ kind: "today", branch: null, scope: "now" })}>
             <span className="nd-signal-tag">Сьогодні</span>
-            {scheduled > 0 ? <b>{countLessons(scheduled)} за розкладом</b> : <b>уроків немає</b>}
-            {scheduled > 0 && <span className="nd-signal-sub">· {formatNumber(done)} проведено</span>}
+            <span className="nd-signal-text">
+              {scheduled > 0 ? <b>{countLessons(scheduled)} за розкладом</b> : <b>уроків немає</b>}
+              {scheduled > 0 && <span className="nd-signal-sub"> · {formatNumber(done)} проведено</span>}
+            </span>
             <span className="nd-signal-go" aria-hidden="true">→</span>
           </button>
           {others.length > SHOWN_OTHER && (

@@ -9,7 +9,7 @@ import { DEMO } from "../../demo/mockApi";
 import { mainBranchExportUrl, mainBranchQueries, UNMARKED_LESSON, type MainBranchFilters, type MainBranchKpi } from "./api";
 import { BranchCards } from "./BranchCards";
 import { BranchCompare } from "./BranchCompare";
-import { PANEL_KINDS, type Panel, type PanelKind } from "./metrics";
+import { PANEL_KINDS, type Panel, type PanelKind, type SignalsState } from "./metrics";
 import { MetricPanel } from "./MetricPanel";
 import { NetworkStrip } from "./NetworkStrip";
 import { NowStrip } from "./NowStrip";
@@ -57,20 +57,21 @@ function humanRange(from: string, to: string): string {
   return `${DAY_MONTH.format(f)}${year(f)} – ${DAY_MONTH.format(t)}${year(t)}`;
 }
 
-/** Що з чим порівнюємо — словами, щоб «−2 в.п.» не виглядали загадкою. */
-function compareText(comparison: MainBranchKpi["comparison"], filters: MainBranchFilters): string {
+/** Що з чим порівнюємо — словами, щоб «−2 в.п.» не виглядали загадкою.
+    `note` — методика (ті самі дні тижня, без сьогодні): на вузьких екранах лише в підказці. */
+function compareText(comparison: MainBranchKpi["comparison"], filters: MainBranchFilters): { text: string; note: string | null } {
   const cur = comparison.current_period;
   const prev = comparison.previous_period;
-  if (!cur || !prev) return "Сьогоднішній день ще триває — порівняємо завтра";
+  if (!cur || !prev) return { text: "Сьогоднішній день ще триває — порівняємо завтра", note: null };
   if (isFullMonth(cur.date_from, cur.date_to) && isFullMonth(prev.date_from, prev.date_to)) {
-    return `Порівнюємо з ${MONTH_WITH[utc(prev.date_from).getUTCMonth()]} ${utc(prev.date_from).getUTCFullYear()}`;
+    return { text: `Порівнюємо з ${MONTH_WITH[utc(prev.date_from).getUTCMonth()]} ${utc(prev.date_from).getUTCFullYear()}`, note: null };
   }
   const span = Math.round((utc(cur.date_to).getTime() - utc(cur.date_from).getTime()) / 86_400_000) + 1;
   const notes = [
     span < 28 ? "ті самі дні тижня" : null,
     cur.date_to.slice(0, 10) !== filters.dateTo ? "без сьогодні — день ще триває" : null,
   ].filter(Boolean);
-  return `Порівнюємо ${formatRangeShort(cur.date_from, cur.date_to)} з ${formatRangeShort(prev.date_from, prev.date_to)}${notes.length ? ` (${notes.join(", ")})` : ""}`;
+  return { text: `Порівнюємо ${formatRangeShort(cur.date_from, cur.date_to)} з ${formatRangeShort(prev.date_from, prev.date_to)}`, note: notes.length ? notes.join(", ") : null };
 }
 
 type Preset = "today" | "week" | "month" | "prev" | "custom";
@@ -186,8 +187,15 @@ export function MainBranchPage() {
   useEffect(() => {
     if (!branchMenu) return;
     const close = (e: MouseEvent) => { if (!branchMenuRef.current?.contains(e.target as Node)) setBranchMenu(false); };
+    // Escape закриває меню філій і повертає фокус на його кнопку
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setBranchMenu(false);
+      branchMenuRef.current?.querySelector<HTMLButtonElement>(".nd-dd-btn")?.focus();
+    };
     document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("click", close); document.removeEventListener("keydown", onKey); };
   }, [branchMenu]);
 
   const datasets = useMemo(() => new Set(network.data?.capabilities.datasets ?? []), [network.data]);
@@ -289,7 +297,13 @@ export function MainBranchPage() {
   const branchesLabel = selectedNames.length === 0 || selectedNames.length === activeBranches.length
     ? `Усі філії (${formatNumber(activeBranches.length)})`
     : selectedNames.length === 1 ? String(selectedNames[0]) : `${formatNumber(selectedNames.length)} ${pluralUk(selectedNames.length, "філія", "філії", "філій")}`;
-  const failed = [kpi, trends, attention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
+  const failed = [kpi, trends, attention, periodAttention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
+  // Сигнали за період: масив — завантажено; інакше картки й таблиця кажуть «вантажаться» / «не завантажено», а не «усе гаразд».
+  const periodSignals: SignalsState = periodAttention.data ? periodAttention.data.items
+    : periodAttention.isLoading ? "loading" : periodAttention.error ? "error" : "off";
+  const trendsState = trends.isLoading ? "loading" : trends.data ? "ready" : "off";
+  const compare = k ? compareText(k.comparison, filters) : null;
+  const allBranches = filters.branchIds.length === 0 || filters.branchIds.length >= activeBranches.length;
 
   return (
     <PageShell
@@ -352,16 +366,8 @@ export function MainBranchPage() {
           </div>
         )}
 
-        {/* ── В. Зведення мережі за період — компактна стрічка, кожен показник веде до розбивки ── */}
-        <NetworkStrip
-          kpi={k}
-          filters={filters}
-          title={`Уся мережа · ${periodLabel}${filters.branchIds.length ? ` · ${branchesLabel}` : ""}`}
-          compareText={k ? compareText(k.comparison, filters) : null}
-          onOpen={setPanel}
-        />
-
-        {/* ── Б. На зараз — один рядок сигналів, незалежний від періоду ── */}
+        {/* ── Б. На зараз — один рядок сигналів, незалежний від періоду; одразу під вибором періоду,
+               щоб періодні блоки (стрічка, картки) йшли далі одним масивом ── */}
         <NowStrip
           today={todayKpi.data}
           unmarked={unmarked.data}
@@ -371,16 +377,27 @@ export function MainBranchPage() {
           onOpen={setPanel}
         />
 
-        {/* ── Г. Філії — головний блок: картка на кожну філію ── */}
+        {/* ── В. Зведення мережі за період — компактна стрічка, кожен показник веде до розбивки ── */}
+        <NetworkStrip
+          kpi={k}
+          title={`Уся мережа · ${periodLabel}${filters.branchIds.length ? ` · ${branchesLabel}` : ""}`}
+          compare={compare}
+          onOpen={setPanel}
+        />
+
+        {/* ── Г. Філії — головний блок: картка на кожну філію (той самий період, що й у стрічці) ── */}
         <div className="nd-section-head">
-          <h3>Філії</h3>
-          <span className="nd-hint">Назва — огляд філії тут; показник — його розбивка лише для цієї філії; «Працювати у філії» — перейти в її роботу</span>
+          <h3>Філії · {periodLabel}</h3>
+          <span className="nd-hint">Назва — огляд · показник — розбивка філії · кнопка — робота у філії</span>
         </div>
         <BranchCards
           rows={k?.branch_rows ?? []}
-          attentionItems={periodAttention.data?.items ?? []}
+          signals={periodSignals}
           trendsByBranch={trends.data?.series.by_branch}
+          trendsState={trendsState}
           mode={mode}
+          compareHint={compare ? (compare.note ? `${compare.text} (${compare.note})` : compare.text) : null}
+          allBranches={allBranches}
           loading={kpi.isLoading}
           canEnter={canEnter}
           busyId={busyId}
@@ -396,17 +413,15 @@ export function MainBranchPage() {
           </p>
         )}
 
-        {/* ── Порівняння таблицею — той самий зріз, але рядками: зручно сортувати ── */}
-        <details className="nd-details" open>
+        {/* ── Порівняння таблицею — той самий зріз рядками, згорнуто: картки вище вже показують усе,
+               таблиця — щоб сортувати й звіряти підсумок ── */}
+        <details className="nd-details">
           <summary><h3>Порівняння філій таблицею</h3><span>ті самі показники рядками — щоб сортувати й звіряти підсумок</span></summary>
           <BranchCompare
             rows={k?.branch_rows ?? []}
-            attentionItems={periodAttention.data?.items ?? []}
+            signals={periodSignals}
             loading={kpi.isLoading}
-            canEnter={canEnter}
-            busyId={busyId}
             onOpen={setPanel}
-            onEnter={(r) => goToBranch(r.tenant_id, r.tenant_name, "/")}
           />
         </details>
 
@@ -454,7 +469,7 @@ export function MainBranchPage() {
           attention={panel.scope === "now" ? attention.data : periodAttention.data}
           filters={filters}
           nowFilters={nowFilters}
-          periodLabel={`${periodLabel} · ${branchesLabel}`}
+          periodLabel={panel.branch !== null ? periodLabel : `${periodLabel} · ${branchesLabel}`}
           nowLabel={`На зараз · останні ${NOW_DAYS} днів`}
           canEnter={canEnter}
           busyId={busyId}
