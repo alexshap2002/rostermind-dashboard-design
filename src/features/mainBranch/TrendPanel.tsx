@@ -35,10 +35,13 @@ export function TrendPanel({ points, loading }: { points: TrendPoint[]; loading:
   const innerW = width - PAD_L - PAD_R;
   const x = (i: number) => PAD_L + (n <= 1 ? innerW / 2 : (i * innerW) / (n - 1));
   const rateH = 132;
-  const barsH = 62;
+  // Стовпчики занять — достатньо високі, щоб 1 заняття було помітним (бриф §6: окремий чіткий масштаб).
+  const barsH = 78;
   const yRate = (v: number) => 8 + (1 - v / 100) * (rateH - 16);
   const maxLessons = Math.max(1, ...points.map((p) => p.lessons));
   const niceMax = maxLessons <= 5 ? 5 : Math.ceil(maxLessons / 5) * 5;
+  // Проміжна поділка шкали занять — щоб другий масштаб читався без підказки.
+  const barTicks = niceMax % 2 === 0 ? [0, niceMax / 2, niceMax] : [0, niceMax];
   const yBar = (v: number) => 6 + (1 - v / niceMax) * (barsH - 12);
   const barW = Math.max(2, Math.min(16, (innerW / Math.max(1, n)) * 0.6));
   const labelEvery = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(innerW / 64))));
@@ -90,7 +93,7 @@ export function TrendPanel({ points, loading }: { points: TrendPoint[]; loading:
           {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={4} y2={rateH - 4} className="nd-cross" />}
         </svg>
         <svg width={width} height={barsH + 22} role="img" aria-label="Кількість проведених занять за період">
-          {[0, niceMax].map((v) => (
+          {barTicks.map((v) => (
             <g key={v}>
               <line x1={PAD_L} x2={width - PAD_R} y1={yBar(v)} y2={yBar(v)} className="nd-grid" />
               <text x={PAD_L - 8} y={yBar(v) + 4} className="nd-axis" textAnchor="end">{v}</text>

@@ -1,14 +1,15 @@
 import { formatNumber, pluralUk } from "../../lib/format";
+import { IconAlert, IconCheck } from "../../lib/icons";
 import type { AnomalyPage, AttentionReport, MainBranchKpi } from "./api";
-import { ANOMALY_LABELS, UNMARKED_LESSON } from "./api";
-import { countLessons, type Panel } from "./metrics";
+import { ANOMALY_LABELS, SEVERITY, UNMARKED_LESSON } from "./api";
+import { countLessons, isRisk, lowerFirst, panelForAnomaly, type Panel } from "./metrics";
 
 const SHOWN_OTHER = 2;
 
-const lower = (s: string) => s[0].toLowerCase() + s.slice(1);
-
 /** «На зараз» — одна статус-лінія під шапкою, не картка: уся мережа, останні `days` днів,
-    від обраного періоду не залежить. Кілька коротких сигналів через «·»; кожен відкриває свою вибірку. */
+    від обраного періоду не залежить. Кілька коротких сигналів через «·»; кожен відкриває свою вибірку.
+    Рівень сигналу — не лише кольором: ризик має трикутник і підпис для читача екрана, текст сигналу —
+    з `summary` сервера (з числом), а не лише назва типу. */
 export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: {
   today: MainBranchKpi | undefined;
   unmarked: AnomalyPage | undefined;
@@ -43,22 +44,23 @@ export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: 
                 <span className="nd-signal-go" aria-hidden="true">→</span>
               </button>
             ) : (
-              <span className="nd-signal ok"><i className="nd-dot" aria-hidden="true" />Усе відмічено</span>
+              <span className="nd-signal ok"><IconCheck aria-hidden="true" />Усе відмічено</span>
             )}
           </span>
           {others.slice(0, SHOWN_OTHER).map((it, i) => {
-            const risk = it.severity === "critical" || it.severity === "high";
+            const risk = isRisk(it.severity);
+            const level = (SEVERITY[it.severity] ?? SEVERITY.info).label;
             return (
               <span className="nd-now-item" key={i}>
                 <button
                   type="button"
                   className={`nd-signal ${risk ? "risk" : "warn"}`}
-                  title={it.summary}
-                  onClick={() => onOpen({ kind: "attendance", branch: it.tenant_id, scope: "now" })}
+                  onClick={() => onOpen(panelForAnomaly(it.anomaly_type, it.tenant_id, "now"))}
                 >
-                  <i className="nd-dot" aria-hidden="true" />
+                  {risk ? <IconAlert aria-hidden="true" /> : <i className="nd-dot" aria-hidden="true" />}
+                  <span className="sr-only">{level}: </span>
                   <b>{it.tenant_name}:</b>
-                  <span className="nd-signal-sub">{lower(ANOMALY_LABELS[it.anomaly_type] ?? it.summary)}</span>
+                  <span className="nd-signal-sub">{lowerFirst(it.summary || ANOMALY_LABELS[it.anomaly_type] || it.anomaly_type)}</span>
                   <span className="nd-signal-go" aria-hidden="true">→</span>
                 </button>
               </span>

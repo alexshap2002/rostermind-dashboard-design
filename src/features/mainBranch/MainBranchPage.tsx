@@ -58,20 +58,24 @@ function humanRange(from: string, to: string): string {
   return `${DAY_MONTH.format(f)}${year(f)} – ${DAY_MONTH.format(t)}${year(t)}`;
 }
 
-/** Що з чим порівнюємо — словами, щоб «−2 в.п.» не виглядали загадкою. */
-function compareText(comparison: MainBranchKpi["comparison"], filters: MainBranchFilters): string {
+/** Що з чим порівнюємо — словами, щоб «−2 в.п.» не виглядали загадкою. Видимим лишається коротке
+    «з чим порівнюємо»; примітки (ті самі дні тижня, без сьогодні) — у підказці (бриф §5). */
+function compareText(comparison: MainBranchKpi["comparison"], filters: MainBranchFilters): { text: string; note: string | null } {
   const cur = comparison.current_period;
   const prev = comparison.previous_period;
-  if (!cur || !prev) return "Сьогоднішній день ще триває — порівняємо завтра";
+  if (!cur || !prev) return { text: "Сьогоднішній день ще триває — порівняємо завтра", note: null };
   if (isFullMonth(cur.date_from, cur.date_to) && isFullMonth(prev.date_from, prev.date_to)) {
-    return `Порівнюємо з ${MONTH_WITH[utc(prev.date_from).getUTCMonth()]} ${utc(prev.date_from).getUTCFullYear()}`;
+    return { text: `Порівнюємо з ${MONTH_WITH[utc(prev.date_from).getUTCMonth()]} ${utc(prev.date_from).getUTCFullYear()}`, note: null };
   }
   const span = Math.round((utc(cur.date_to).getTime() - utc(cur.date_from).getTime()) / 86_400_000) + 1;
   const notes = [
     span < 28 ? "ті самі дні тижня" : null,
     cur.date_to.slice(0, 10) !== filters.dateTo ? "без сьогодні — день ще триває" : null,
   ].filter(Boolean);
-  return `Порівнюємо ${formatRangeShort(cur.date_from, cur.date_to)} з ${formatRangeShort(prev.date_from, prev.date_to)}${notes.length ? ` (${notes.join(", ")})` : ""}`;
+  return {
+    text: `Порівнюємо ${formatRangeShort(cur.date_from, cur.date_to)} з ${formatRangeShort(prev.date_from, prev.date_to)}`,
+    note: notes.length ? notes.join(", ") : null,
+  };
 }
 
 type Preset = "today" | "week" | "month" | "prev" | "custom";
@@ -293,8 +297,11 @@ export function MainBranchPage() {
   const noCompare = Boolean(k && !k.comparison.previous_period);
   const attDelta = k?.comparison.attendance_rate_pct?.delta_percentage_points;
   const payDelta = k?.comparison.payroll_total_uah?.delta_percent;
-  const failed = [kpi, trends, attention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
-  const attentionByTenant = periodAttention.data?.totals.by_tenant ?? {};
+  const failed = [kpi, trends, attention, periodAttention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
+  // Набір «attention» може бути недоступний ролі — тоді блок сигналів за період не показуємо зовсім
+  // (а не «усе спокійно»); поки контекст мережі вантажиться — скелетон.
+  const attentionAvailable = !network.data || datasets.has("attention");
+  const compare = k ? compareText(k.comparison, filters) : null;
   const open = (kind: PanelKind) => () => setPanel({ kind, branch: null, scope: "period" });
 
   /* ── А. Контекст: один період, один фільтр філій, вторинний експорт — у шапці, праворуч від назви ── */
@@ -373,7 +380,12 @@ export function MainBranchPage() {
         {/* ── В. Основні показники за період ── */}
         <div className="nd-section-head">
           <h3>За період <strong>{periodLabel} · {branchesLabel}</strong></h3>
-          {k && <span className="nd-compare" title="Як рахуємо зміну">{compareText(k.comparison, filters)}</span>}
+          {compare && (
+            <span className="nd-compare" title={compare.note ? `${compare.text} — ${compare.note}` : "Як рахуємо зміну"}>
+              {compare.text}
+              {compare.note && <span className="sr-only"> ({compare.note})</span>}
+            </span>
+          )}
         </div>
         <div className="nd-kpis">
           <Kpi label="Діти в базі" loading={!k} onOpen={open("students")}
@@ -419,7 +431,7 @@ export function MainBranchPage() {
         </div>
         <BranchCompare
           rows={k?.branch_rows ?? []}
-          attentionByTenant={attentionByTenant}
+          attention={periodAttention.data?.items ?? []}
           loading={kpi.isLoading}
           canEnter={canEnter}
           busyId={busyId}
@@ -431,7 +443,7 @@ export function MainBranchPage() {
         )}
 
         {/* ── Д. Динаміка + сигнали за період ── */}
-        <div className="nd-bottom">
+        <div className={`nd-bottom${attentionAvailable ? "" : " single"}`}>
           <section className="nd-card nd-trend" aria-labelledby="nd-trend-title">
             <div className="nd-card-head">
               <div>
@@ -447,7 +459,16 @@ export function MainBranchPage() {
             </div>
             {span >= 7 && <TrendPanel points={points} loading={trends.isLoading} />}
           </section>
-          <PeriodSignals report={periodAttention.data} loading={periodAttention.isLoading} onOpen={setPanel} />
+          {attentionAvailable && (
+            <PeriodSignals
+              report={periodAttention.data}
+              loading={periodAttention.isLoading || !network.data}
+              error={Boolean(periodAttention.error)}
+              periodLabel={periodLabel}
+              onRetry={onRefresh}
+              onOpen={setPanel}
+            />
+          )}
         </div>
 
         {/* ── Детальні звіти ── */}

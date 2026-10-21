@@ -1,11 +1,28 @@
 import { formatNumber, pluralUk } from "../../lib/format";
-import type { BranchRow } from "./api";
+import { UNMARKED_LESSON, type BranchRow } from "./api";
 
 /** Що відкриває бічна панель: показник (з філією чи без) або огляд філії. */
 export type PanelKind = "students" | "new" | "lessons" | "attendance" | "payroll" | "unmarked" | "today" | "attention" | "branch";
 export interface Panel { kind: PanelKind; branch: number | null; scope: "period" | "now" }
 
 export const PANEL_KINDS: PanelKind[] = ["students", "new", "lessons", "attendance", "payroll", "unmarked", "today", "attention", "branch"];
+
+/** Куди веде сигнал уваги (один мапінг для «На зараз», колонки «Увага» й «Сигналів за період»):
+    падіння відвідуваності — у таблицю відвідуваності, невідмічені — у список уроків,
+    решта типів з api.ts — у «Потребує уваги» саме цієї філії (бриф §4: відфільтрована проблема). */
+export function panelForAnomaly(anomalyType: string, branch: number | null, scope: Panel["scope"]): Panel {
+  const kind: PanelKind = anomalyType === "ATTENDANCE_DROP" ? "attendance" : anomalyType === UNMARKED_LESSON ? "unmarked" : "attention";
+  return { kind, branch, scope };
+}
+
+/** Порядок рівнів сигналу з api.ts (SEVERITY): чим менше, тим важливіше. Невідомий рівень — у кінець. */
+const SEVERITY_RANK: Record<string, number> = { critical: 0, high: 1, warning: 2, medium: 3, low: 4, info: 5 };
+export const severityRank = (severity: string) => SEVERITY_RANK[severity] ?? 9;
+/** «Ризик» — critical/high; решта — «перевірити». */
+export const isRisk = (severity: string) => severity === "critical" || severity === "high";
+
+/** «Відвідуваність впала» → «відвідуваність впала» — щоб вставляти підпис у речення. */
+export const lowerFirst = (s: string) => (s ? s[0].toLowerCase() + s.slice(1) : s);
 
 /** Підсумок мережі з рядків філій. Відвідуваність — присутні / очікувані по всіх філіях,
     а не середнє відсотків: філія з 300 дітьми важить більше за філію з 30. */
