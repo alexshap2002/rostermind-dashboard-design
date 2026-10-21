@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { formatCurrency, formatNumber, formatPercent, pluralUk } from "../../lib/format";
 import { IconClose } from "../../lib/icons";
 import {
-  mainBranchQueries, SEVERITY, UNMARKED_LESSON,
+  mainBranchQueries, UNMARKED_LESSON,
   type AttentionReport, type BranchRow, type MainBranchFilters, type MainBranchKpi,
 } from "./api";
-import { Delta, countLessons, networkTotals, type Panel, type PanelKind } from "./metrics";
+import { Delta, SIGNAL_TAG, countLessons, networkTotals, signalTone, type Panel, type PanelKind } from "./metrics";
 
 const KYIV_WHEN = new Intl.DateTimeFormat("uk-UA", {
   timeZone: "Europe/Kyiv", weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
@@ -15,7 +15,7 @@ const KYIV_WHEN = new Intl.DateTimeFormat("uk-UA", {
 const TITLES: Record<PanelKind, string> = {
   students: "Діти в базі",
   new: "Нові діти за період",
-  lessons: "Проведені заняття",
+  lessons: "Проведено занять",
   attendance: "Відвідуваність",
   payroll: "Нараховано зарплат",
   unmarked: "Невідмічені заняття",
@@ -24,9 +24,14 @@ const TITLES: Record<PanelKind, string> = {
   branch: "Огляд філії",
 };
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+
 interface Props {
   panel: Panel;
+  /** KPI для вікна панелі: за обраний період або за «зараз» (останні N днів) — щоб числа відповідали підпису. */
   kpi: MainBranchKpi | undefined;
+  /** KPI для цього вікна ще вантажиться. */
+  kpiLoading: boolean;
   todayKpi: MainBranchKpi | undefined;
   attention: AttentionReport | undefined;
   filters: MainBranchFilters;
@@ -43,11 +48,29 @@ interface Props {
 export function MetricPanel(props: Props) {
   const { panel, onPanel } = props;
   const closeRef = useRef<HTMLButtonElement>(null);
+  const asideRef = useRef<HTMLElement>(null);
+  // Модальний діалог: фокус заходить на «Закрити», Tab циклить усередині панелі, Escape закриває,
+  // а після закриття фокус повертається на кнопку, з якої панель відкрили.
   useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onPanel(null); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onPanel(null); return; }
+      const root = asideRef.current;
+      if (e.key !== "Tab" || !root) return;
+      const items = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !root.contains(active))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (active === last || !root.contains(active))) { e.preventDefault(); first.focus(); }
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (opener?.isConnected) opener.focus();
+    };
   }, [onPanel]);
 
   const rowsAll = (panel.kind === "today" ? props.todayKpi : props.kpi)?.branch_rows ?? [];
@@ -57,7 +80,7 @@ export function MetricPanel(props: Props) {
   return (
     <div className="nd-drawer-wrap">
       <button type="button" className="nd-scrim" aria-label="Закрити панель" onClick={() => onPanel(null)} />
-      <aside className="nd-drawer" role="dialog" aria-modal="true" aria-labelledby="nd-drawer-title">
+      <aside ref={asideRef} className="nd-drawer" role="dialog" aria-modal="true" aria-labelledby="nd-drawer-title">
         <header className="nd-drawer-head">
           <div>
             <div className="nd-eyebrow">{scopeLabel}</div>
@@ -71,7 +94,9 @@ export function MetricPanel(props: Props) {
           <button ref={closeRef} type="button" className="nd-icon-btn" aria-label="Закрити" onClick={() => onPanel(null)}><IconClose /></button>
         </header>
         <div className="nd-drawer-body">
-          <PanelBody {...props} rowsAll={rowsAll} branchName={branchName} />
+          {props.kpiLoading && rowsAll.length === 0
+            ? <span className="nd-skel" style={{ width: "100%", height: 120 }} aria-busy="true" />
+            : <PanelBody {...props} rowsAll={rowsAll} branchName={branchName} />}
         </div>
       </aside>
     </div>
@@ -132,7 +157,7 @@ function PanelBody(props: Props & { rowsAll: BranchRow[]; branchName: string | u
       return (
         <>
           <p className="nd-note">Навчальні заняття за період: проведено — відмічені вчителем; не відмічено — минули, але відмітки немає; попереду — сьогоднішні й пізніші.</p>
-          <Table head={["Філія", "Проведено", "Заплановано", "Не відмічено", "Попереду", ""]}>
+          <Table head={["Філія", "Проведено", "Заплановано", "Без відмітки", "Попереду", ""]}>
             {rows.map((r) => (
               <tr key={r.tenant_id}>
                 <th scope="row">{r.tenant_name}</th>
@@ -257,10 +282,10 @@ function AttentionList({ items, all = false }: { items: AttentionReport["items"]
     <div className="nd-att">
       <h4>Сигнали</h4>
       {items.map((it, i) => {
-        const sev = SEVERITY[it.severity] ?? SEVERITY.info;
+        const tone = signalTone(it.severity);
         return (
           <div key={i} className="nd-att-item">
-            <span className={`nd-pill ${sev.tone === "delete" ? "risk" : "warn"}`}>{sev.label}</span>
+            <span className={`nd-pill ${tone}`}>{SIGNAL_TAG[tone]}</span>
             <div>
               <div className="nd-att-title">{it.summary}</div>
               <div className="nd-att-sub">{[it.tenant_name, it.club_name].filter(Boolean).join(" · ")}</div>

@@ -51,12 +51,22 @@ export function Delta({ value, unit, tone = "good", suffix }: {
 
 export const countLessons = (n: number) => `${formatNumber(n)} ${pluralUk(n, "урок", "уроки", "уроків")}`;
 
+/** Єдиний словник тону сигналу на всій сторінці: «Ризик» для critical/high, «Увага» для решти. */
+export const signalTone = (severity: string): "risk" | "warn" => (severity === "critical" || severity === "high" ? "risk" : "warn");
+export const SIGNAL_TAG: Record<"risk" | "warn", string> = { risk: "Ризик", warn: "Увага" };
+
 /** Стан філії за період — з тих самих даних, що й усюди: невідмічені з рядка філії,
-    решта — з сигналів сервера. Тож картка «Філії», колонка «Статус» і панель кажуть одне й те саме. */
+    решта — з сигналів сервера. Тож колонка «Статус», панель і картка сигналів кажуть одне й те саме.
+    Занять не було — окремий стан, а не «усе гаразд» (бриф §5: нуль, немає даних і «ще не відмічено» — різні). */
 export interface BranchSignal { kind: PanelKind; tone: "warn" | "risk" | "neutral"; text: string }
 
 export function branchSignals(row: BranchRow, items: AttentionItem[]): BranchSignal[] {
+  if (row.lessons_scheduled === 0) return [{ kind: "lessons", tone: "neutral", text: "занять не було" }];
   const own = items.filter((it) => it.tenant_id === row.tenant_id && it.anomaly_type !== UNMARKED_LESSON);
+  // Ще нічого не проведено й нічого не прострочено (наприклад, «Сьогодні» зранку) — це не «усе гаразд», а «попереду».
+  if (row.lessons_completed === 0 && row.lessons_unmarked_overdue === 0 && own.length === 0 && row.lessons_upcoming > 0) {
+    return [{ kind: "lessons", tone: "neutral", text: `${formatNumber(row.lessons_upcoming)} попереду` }];
+  }
   const out: BranchSignal[] = [];
   if (row.lessons_unmarked_overdue > 0) {
     out.push({ kind: "unmarked", tone: "warn", text: `${formatNumber(row.lessons_unmarked_overdue)} не відмічено` });

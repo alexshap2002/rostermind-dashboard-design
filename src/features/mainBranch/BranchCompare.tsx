@@ -8,6 +8,8 @@ interface Props {
   rows: BranchRow[];
   /** Сигнали за обраний період — з них рахується колонка «Статус». */
   attention: AttentionItem[];
+  /** Сигнали за період не завантажились: «усе гаразд» казати не можна. */
+  attentionFailed: boolean;
   loading: boolean;
   canEnter: boolean;
   busyId: number | null;
@@ -17,12 +19,17 @@ interface Props {
 
 /** Порівняння філій — головний робочий блок. Клітинка відкриває той самий показник лише цієї філії,
     назва — «Огляд філії» в аналітиці мережі, а «Працювати у філії» змінює робочий контекст. */
-export function BranchCompare({ rows, attention, loading, canEnter, busyId, onOpen, onEnter }: Props) {
-  const withSignals = rows.map((r) => ({ ...r, signals: branchSignals(r, attention), attention: branchSignals(r, attention).length }));
+export function BranchCompare({ rows, attention, attentionFailed, loading, canEnter, busyId, onOpen, onEnter }: Props) {
+  const withSignals = rows.map((r) => {
+    const signals = branchSignals(r, attention);
+    return { ...r, signals, attention: signals.length };
+  });
   const sort = useSort(withSignals, "students_total", "desc");
   const net = networkTotals(rows);
+  // Видимий вміст лишається ім'ям кнопки (число чує й екранний читач); контекст — прихованим префіксом.
   const cell = (kind: PanelKind, row: BranchRow, children: ReactNode, label: string) => (
-    <button type="button" className="nd-cell" aria-label={`${label}: ${row.tenant_name}`} onClick={() => onOpen({ kind, branch: row.tenant_id, scope: "period" })}>
+    <button type="button" className="nd-cell" onClick={() => onOpen({ kind, branch: row.tenant_id, scope: "period" })}>
+      <span className="sr-only">{label}, {row.tenant_name}: </span>
       {children}
     </button>
   );
@@ -53,7 +60,7 @@ export function BranchCompare({ rows, attention, loading, canEnter, busyId, onOp
           {sort.sorted.map((r) => (
             <tr key={r.tenant_id}>
               <th scope="row" data-label="Філія">
-                <button type="button" className="nd-branch-name" onClick={() => onOpen({ kind: "branch", branch: r.tenant_id, scope: "period" })}>
+                <button type="button" className="nd-branch-name" title="Огляд філії в аналітиці мережі" onClick={() => onOpen({ kind: "branch", branch: r.tenant_id, scope: "period" })}>
                   {r.tenant_name}
                   <span className="nd-branch-hint">Огляд філії →</span>
                 </button>
@@ -75,22 +82,21 @@ export function BranchCompare({ rows, attention, loading, canEnter, busyId, onOp
               </td>
               <td className="r" data-label="Нараховано">{cell("payroll", r, `${formatCurrency(r.payroll_uah)} ₴`, "Нараховано зарплат")}</td>
               <td data-label="Статус">
-                {r.signals.length === 0 ? (
-                  <span className="nd-pill ok">усе гаразд</span>
-                ) : (
-                  <span className="nd-signals">
-                    {r.signals.map((s) => (
-                      <button key={s.kind} type="button" className={`nd-pill ${s.tone}`} onClick={() => onOpen({ kind: s.kind, branch: r.tenant_id, scope: "period" })}>
-                        {s.text}
-                      </button>
-                    ))}
-                  </span>
-                )}
+                <span className="nd-signals">
+                  {r.signals.map((s) => (
+                    <button key={s.kind} type="button" className={`nd-pill ${s.tone}`} onClick={() => onOpen({ kind: s.kind, branch: r.tenant_id, scope: "period" })}>
+                      {s.text}
+                    </button>
+                  ))}
+                  {attentionFailed && r.lessons_scheduled > 0 && <span className="nd-pill neutral">сигнали не завантажено</span>}
+                  {r.signals.length === 0 && !attentionFailed && <span className="nd-pill ok">усе гаразд</span>}
+                </span>
               </td>
               <td className="nd-act">
                 {canEnter && (
-                  <button type="button" className="btn ghost sm keep-label" disabled={busyId !== null} onClick={() => onEnter(r)}>
-                    <span>{busyId === r.tenant_id ? "Переходимо…" : "Працювати у філії"}</span>
+                  <button type="button" className="btn ghost sm keep-label" disabled={busyId !== null} title="Перейти в роботу філії" onClick={() => onEnter(r)}>
+                    <span className="nd-act-full">{busyId === r.tenant_id ? "Переходимо…" : "Працювати у філії"}</span>
+                    <span className="nd-act-short" aria-hidden="true">{busyId === r.tenant_id ? "…" : "У філії"}</span>
                   </button>
                 )}
               </td>
@@ -107,9 +113,13 @@ export function BranchCompare({ rows, attention, loading, canEnter, busyId, onOp
               <td className="r" data-label="Відвідуваність">{net.attendance_rate_pct === null ? "—" : formatPercent(net.attendance_rate_pct)}</td>
               <td className="r" data-label="Нараховано">{formatCurrency(net.payroll_uah)} ₴</td>
               <td data-label="Статус">
-                {net.lessons_unmarked_overdue > 0
-                  ? <span className="nd-pill warn">{formatNumber(net.lessons_unmarked_overdue)} не відмічено</span>
-                  : <span className="nd-pill ok">усе відмічено</span>}
+                {net.lessons_scheduled === 0
+                  ? <span className="nd-pill neutral">занять не було</span>
+                  : net.lessons_unmarked_overdue > 0
+                    ? <span className="nd-pill warn">{formatNumber(net.lessons_unmarked_overdue)} не відмічено</span>
+                    : net.lessons_completed === 0 && net.lessons_upcoming > 0
+                      ? <span className="nd-pill neutral">{formatNumber(net.lessons_upcoming)} попереду</span>
+                      : <span className="nd-pill ok">усе відмічено</span>}
               </td>
               <td />
             </tr>

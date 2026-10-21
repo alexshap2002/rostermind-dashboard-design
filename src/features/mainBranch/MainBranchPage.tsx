@@ -12,11 +12,11 @@ import {
 import { IconActivity, IconCheckSquare, IconMoney, IconStudents } from "../../lib/icons";
 import { DEMO } from "../../demo/mockApi";
 import {
-  ANOMALY_LABELS, SEVERITY, UNMARKED_LESSON, mainBranchExportUrl, mainBranchQueries,
-  type AttentionItem, type BranchRow, type MainBranchFilters, type MainBranchKpi,
+  ANOMALY_LABELS, UNMARKED_LESSON, mainBranchExportUrl, mainBranchQueries,
+  type AttentionItem, type MainBranchFilters, type MainBranchKpi,
 } from "./api";
 import { BranchCompare } from "./BranchCompare";
-import { Delta, PANEL_KINDS, branchSignals, countLessons, type Panel, type PanelKind } from "./metrics";
+import { Delta, PANEL_KINDS, SIGNAL_TAG, countLessons, signalTone, type Panel, type PanelKind } from "./metrics";
 import { MetricPanel } from "./MetricPanel";
 import { NeonNav, type PresetItem, type Section } from "./NeonNav";
 import { NowStrip } from "./NowStrip";
@@ -155,7 +155,7 @@ function spaActionUrl(url: string | null): string {
   return query ? `${target}?${query}` : target;
 }
 
-const SECTION_IDS: Record<Section, string> = { top: "nd-top", branches: "nd-branches", reports: "nd-reports" };
+const SECTION_IDS: Record<Section, string> = { top: "nd-top", branches: "nd-branches", trend: "nd-trend", reports: "nd-reports" };
 
 /** Прокрутити до розділу; липка шапка врахована через scroll-margin-top у стилях. */
 function scrollToSection(section: Section) {
@@ -175,6 +175,8 @@ function NeonShell({ children }: { children: ReactNode }) {
   if (summary.error instanceof ApiError && summary.error.status === 403) return <AccessProblem error={summary.error} />;
   return (
     <>
+      {/* Перший таб-стоп сторінки: оминути шапку й панель навігації (≈ 20 зупинок) */}
+      <a className="nd-skip" href="#nd-top">Перейти до показників</a>
       <TopNav counts={counts} user={s?.user} tenantName={s?.tenant.name} />
       <div className="content wide">{children}</div>
     </>
@@ -206,12 +208,13 @@ export function MainBranchPage() {
   }, []);
 
   // Стан сторінки (період, філії, вкладка, відкрита панель) живе в адресі: «Назад до мережі» повертає сюди ж.
+  // Вкладка пишеться лише коли звіти розгорнуті — інакше перезавантаження розгортало б їх само собою.
   useEffect(() => {
     const params = new URLSearchParams();
     params.set("date_from", filters.dateFrom);
     params.set("date_to", filters.dateTo);
     for (const id of filters.branchIds) params.append("branch_ids", String(id));
-    params.set("tab", tab);
+    if (reportsOpen) params.set("tab", tab);
     if (panel) {
       params.set("panel", panel.kind);
       if (panel.branch !== null) params.set("panel_branch", String(panel.branch));
@@ -220,7 +223,7 @@ export function MainBranchPage() {
     const url = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, "", url);
     rememberNetworkUrl(url);
-  }, [filters.branchIds, filters.dateFrom, filters.dateTo, tab, panel]);
+  }, [filters.branchIds, filters.dateFrom, filters.dateTo, tab, reportsOpen, panel]);
 
   const datasets = useMemo(() => new Set(network.data?.capabilities.datasets ?? []), [network.data]);
   const enabled = (dataset: string) => Boolean(network.data && datasets.has(dataset));
@@ -239,6 +242,14 @@ export function MainBranchPage() {
   const attention = useQuery({ ...mainBranchQueries.attention(nowFilters), enabled: enabled("attention") });
   const todayKpi = useQuery({ ...mainBranchQueries.kpi(todayFilters), enabled: enabled("kpi") });
   const unmarked = useQuery({ ...mainBranchQueries.anomalies(nowFilters, 0, 100, { type: UNMARKED_LESSON }), enabled: enabled("anomalies") });
+  // KPI за вікно «зараз» — лише коли з «На зараз» відкрито панель: числа в ній мають відповідати підпису «останні 30 днів».
+  const kpiNow = useQuery({ ...mainBranchQueries.kpi(nowFilters), enabled: enabled("kpi") && panel?.scope === "now" });
+  // Невідмічені уроки по філіях за ті самі 30 днів — для бейджів у навігації (одне вікно з «На зараз»).
+  const unmarkedNow = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const r of unmarked.data?.rows ?? []) m.set(r.tenant_id, (m.get(r.tenant_id) ?? 0) + 1);
+    return m;
+  }, [unmarked.data]);
 
   const activeBranches = (network.data?.branches ?? []).filter((b) => b.lifecycle_status === "active");
   const pendingCount = (network.data?.branches ?? []).filter((b) => b.lifecycle_status === "onboarding").length;
@@ -311,13 +322,10 @@ export function MainBranchPage() {
     }
   }
 
-  /** Перехід до розділу з навігації; «Проблеми» ще й розгортає звіти на потрібній вкладці. */
-  function jump(target: Section, tabKey?: "problems") {
+  /** Перехід до розділу з навігації; «Звіти» ще й розгортає «Детальні звіти». */
+  function jump(target: Section) {
     setSection(target);
-    if (target === "reports") {
-      setReportsOpen(true);
-      if (tabKey) setTab(tabKey);
-    }
+    if (target === "reports") setReportsOpen(true);
     // Розгортка може ще не відрендеритись — прокручуємо після кадру.
     window.requestAnimationFrame(() => scrollToSection(target));
   }
@@ -339,8 +347,10 @@ export function MainBranchPage() {
   const noCompare = Boolean(k && !k.comparison.previous_period);
   const attDelta = k?.comparison.attendance_rate_pct?.delta_percentage_points;
   const payDelta = k?.comparison.payroll_total_uah?.delta_percent;
-  const failed = [kpi, trends, attention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
+  const isFailed = (q: { error: unknown }) => q.error instanceof ApiError;
+  const failed = [kpi, kpiAll, trends, attention, periodAttention, todayKpi, unmarked, kpiNow].find(isFailed)?.error as ApiError | undefined;
   const periodItems = periodAttention.data?.items ?? [];
+  const periodFailed = isFailed(periodAttention);
   const open = (kind: PanelKind) => () => setPanel({ kind, branch: null, scope: "period" });
   // Підписи пресетів у навігації — коротко: «20 жовтня», «19–20 жовтня», «вересень» (рік — лише якщо інший).
   const presets: PresetItem[] = PRESETS.map((p) => {
@@ -361,12 +371,16 @@ export function MainBranchPage() {
           onPanel={(kind) => setPanel({ kind, branch: null, scope: "period" })}
           presets={presets}
           preset={preset}
+          periodLabel={periodLabel}
+          branchesLabel={branchesLabel}
           onPreset={(key) => { setCustomOpen(false); setRange(presetRange(key as Exclude<Preset, "custom">)); }}
           onCustom={() => setCustomOpen(true)}
           filters={filters}
           onRange={setRange}
           branches={activeBranches}
           rowsAll={kpiAll.data?.branch_rows ?? []}
+          unmarkedNow={unmarkedNow}
+          nowDays={NOW_DAYS}
           onToggleBranch={toggleBranch}
           onAllBranches={() => setFilters((f) => ({ ...f, refresh: false, branchIds: [] }))}
           onRefresh={onRefresh}
@@ -375,7 +389,7 @@ export function MainBranchPage() {
           onExport={downloadReport}
         />
 
-        <main className="nd-main" id="nd-top">
+        <main className="nd-main" id="nd-top" tabIndex={-1}>
           {DEMO && <div className="nd-demo" role="note"><b>Демо-версія</b> · дані вигадані, лише для обговорення дизайну. Зміни й переходи у філії вимкнено.</div>}
 
           {/* ── А. Контекст ── */}
@@ -388,11 +402,6 @@ export function MainBranchPage() {
                 {k && <> · {formatUpdatedAt(k.generated_at)}</>}
               </p>
               {k && <p className="nd-compare">{compareText(k.comparison, filters)}</p>}
-            </div>
-            <div className="nd-jump" role="group" aria-label="Перейти до розділу">
-              <button type="button" className={section === "top" ? "on" : ""} onClick={() => jump("top")}>Огляд</button>
-              <button type="button" className={section === "branches" ? "on" : ""} onClick={() => jump("branches")}>Філії</button>
-              <button type="button" className={section === "reports" ? "on" : ""} onClick={() => jump("reports")}>Звіти</button>
             </div>
           </header>
 
@@ -409,34 +418,31 @@ export function MainBranchPage() {
             <Kpi tone="teal" icon={<IconStudents />} label="Діти в базі" loading={!k} onOpen={open("students")}
               value={k ? formatNumber(k.students_total) : ""}
               sub="поточна база на кінець періоду"
-              extra={k && (
-                <button type="button" className="nd-kpi-chip" onClick={open("new")}>
-                  {k.students_new > 0 ? `+${formatNumber(k.students_new)} нових за період →` : "нових за період немає"}
-                </button>
-              )} />
+              extra={k && (k.students_new > 0
+                ? <button type="button" className="nd-kpi-chip" onClick={open("new")}>+{formatNumber(k.students_new)} нових за період →</button>
+                : <span className="nd-kpi-note">нових за період немає</span>)} />
             <Kpi tone="violet" icon={<IconCheckSquare />} label="Проведено занять" loading={!k} onOpen={open("lessons")}
               value={k ? <>{formatNumber(k.lessons_completed)}<small> з {formatNumber(k.lessons_scheduled)}</small></> : ""}
-              sub="навчальні заняття з відміткою"
-              extra={k && (
-                <>
-                  {k.lessons_unmarked_overdue > 0
-                    ? <button type="button" className="nd-kpi-chip" onClick={() => setPanel({ kind: "unmarked", branch: null, scope: "period" })}>{formatNumber(k.lessons_unmarked_overdue)} не відмічено →</button>
-                    : <span className="nd-kpi-chip static">усі відмічено</span>}
-                  {k.lessons_upcoming > 0 && <span className="nd-kpi-chip static">{formatNumber(k.lessons_upcoming)} попереду</span>}
-                </>
-              )} />
+              sub={k && k.lessons_upcoming > 0 ? `з відміткою · ${formatNumber(k.lessons_upcoming)} попереду` : "навчальні заняття з відміткою"}
+              extra={k && (k.lessons_unmarked_overdue > 0
+                ? <button type="button" className="nd-kpi-chip" onClick={() => setPanel({ kind: "unmarked", branch: null, scope: "period" })}>{formatNumber(k.lessons_unmarked_overdue)} не відмічено →</button>
+                : <span className="nd-kpi-note">{k.lessons_scheduled > 0 ? "усі відмічено" : "занять не було"}</span>)} />
             <Kpi tone="orange" icon={<IconActivity />} label="Відвідуваність" loading={!k} onOpen={open("attendance")}
               value={k ? (k.attendance_has_data ? formatPercent(k.attendance_rate_pct) : "—") : ""}
               sub={k ? (!k.attendance_has_data ? "занять з дітьми не було" : "присутні з очікуваних дітей") : null}
               delta={k && k.attendance_has_data ? (noCompare ? <small>порівняємо завтра — день ще триває</small>
                 : attDelta === null || attDelta === undefined ? <small>немає з чим порівняти</small>
-                : <><Delta value={attDelta} unit="pp" /><small>до попереднього періоду</small></>) : null} />
+                : <><Delta value={attDelta} unit="pp" /><small>до попереднього періоду</small></>) : null}
+              extra={k && k.attendance_has_data && k.lessons_unmarked_overdue > 0 && (
+                <span className="nd-kpi-note">{countLessons(k.lessons_unmarked_overdue)} без відмітки не враховано</span>
+              )} />
             <Kpi tone="pink" icon={<IconMoney />} label="Нараховано зарплат" loading={!k} onOpen={open("payroll")}
               value={k ? `${formatCurrency(k.payroll_total_uah)} ₴` : ""}
               sub="нарахування за заняття й бонуси"
               delta={k ? (noCompare ? <small>порівняємо завтра — день ще триває</small>
                 : payDelta === null || payDelta === undefined ? <small>немає з чим порівняти</small>
-                : <><Delta value={payDelta} unit="pct" tone="neutral" /><small>до попереднього періоду</small></>) : null} />
+                : <><Delta value={payDelta} unit="pct" tone="neutral" /><small>до попереднього періоду</small></>) : null}
+              extra={k && <span className="nd-kpi-note">{formatNumber(k.teachers_total)} {pluralUk(k.teachers_total, "працівник", "працівники", "працівників")}</span>} />
           </div>
           {k && (
             <p className="nd-aux">
@@ -446,18 +452,19 @@ export function MainBranchPage() {
             </p>
           )}
 
-          {/* ── Б. На зараз · стан філій · сигнали за період ── */}
-          <div className="nd-trio">
+          {/* ── Б. На зараз (30 днів) · сигнали за обраний період — два вікна поруч, кожне підписане ── */}
+          <div className="nd-duo">
             <NowStrip
               today={todayKpi.data}
               unmarked={unmarked.data}
               attention={attention.data}
               days={NOW_DAYS}
               loading={todayKpi.isLoading || unmarked.isLoading || attention.isLoading}
+              failed={{ today: isFailed(todayKpi), unmarked: isFailed(unmarked), attention: isFailed(attention) }}
+              onRetry={onRefresh}
               onOpen={setPanel}
             />
-            <BranchStatus rows={k?.branch_rows ?? []} attention={periodItems} loading={kpi.isLoading} onOpen={setPanel} />
-            <PeriodSignals items={periodItems} loading={periodAttention.isLoading} onOpen={setPanel} />
+            <PeriodSignals items={periodItems} loading={periodAttention.isLoading} failed={periodFailed} onRetry={onRefresh} onOpen={setPanel} />
           </div>
 
           {/* ── Г. Філії ── */}
@@ -469,6 +476,7 @@ export function MainBranchPage() {
             <BranchCompare
               rows={k?.branch_rows ?? []}
               attention={periodItems}
+              attentionFailed={periodFailed}
               loading={kpi.isLoading}
               canEnter={canEnter}
               busyId={busyId}
@@ -481,17 +489,22 @@ export function MainBranchPage() {
           </section>
 
           {/* ── Д. Динаміка ── */}
-          <section className="nd-card nd-trend" aria-labelledby="nd-trend-h">
+          <section className="nd-card nd-trend" id="nd-trend" aria-labelledby="nd-trend-h">
             <header className="nd-card-head">
               <div>
                 <h3 id="nd-trend-h">Динаміка за період</h3>
                 <span className="nd-meta">{span < 7 ? "для динаміки оберіть щонайменше тиждень" : mode === "daily" ? "по днях" : "по тижнях"}</span>
               </div>
               {span >= 7 && (
-                <div className="nd-seg" role="radiogroup" aria-label="Крок графіка">
-                  <button type="button" role="radio" aria-checked={mode === "daily"} className={mode === "daily" ? "on" : ""} onClick={() => setTrendMode("daily")}>По днях</button>
-                  <button type="button" role="radio" aria-checked={mode === "weekly"} className={mode === "weekly" ? "on" : ""} onClick={() => setTrendMode("weekly")}>По тижнях</button>
-                </div>
+                <fieldset className="nd-seg">
+                  <legend className="sr-only">Крок графіка</legend>
+                  {(["daily", "weekly"] as const).map((m) => (
+                    <label key={m} className={mode === m ? "on" : ""}>
+                      <input type="radio" name="nd-trend-step" className="sr-only" checked={mode === m} onChange={() => setTrendMode(m)} />
+                      <span>{m === "daily" ? "По днях" : "По тижнях"}</span>
+                    </label>
+                  ))}
+                </fieldset>
               )}
             </header>
             {span >= 7 && <TrendPanel points={points} loading={trends.isLoading} />}
@@ -520,7 +533,8 @@ export function MainBranchPage() {
       {panel && (
         <MetricPanel
           panel={panel}
-          kpi={k}
+          kpi={panel.scope === "now" ? kpiNow.data : k}
+          kpiLoading={panel.scope === "now" ? kpiNow.isLoading : kpi.isLoading}
           todayKpi={todayKpi.data}
           attention={panel.scope === "now" ? attention.data : periodAttention.data}
           filters={filters}
@@ -540,66 +554,35 @@ export function MainBranchPage() {
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 const lower = (s: string) => s[0].toLowerCase() + s.slice(1);
 
-/** Градієнтна картка показника: уся картка — кнопка з видимим «Переглянути»; чипи — окремими кнопками поруч. */
+/** Градієнтна картка показника: уся картка — кнопка, видимий текст і є її ім'ям (число чує й екранний читач).
+    Слоти в усіх чотирьох однакові: підпис → число → пояснення → зміна (якщо є) → «Переглянути» внизу →
+    рядок дій/приміток однакової висоти; чипи-кнопки — лише те, що справді клікається. */
 function Kpi({ tone, icon, label, value, sub, delta, extra, loading, onOpen }: {
   tone: "teal" | "violet" | "orange" | "pink"; icon: ReactNode; label: string; value: ReactNode;
   sub?: ReactNode; delta?: ReactNode; extra?: ReactNode; loading: boolean; onOpen: () => void;
 }) {
   return (
     <div className={`nd-kpi ${tone}`}>
-      <button type="button" className="nd-kpi-main" onClick={onOpen} aria-label={`${label}: переглянути по філіях`}>
+      <button type="button" className="nd-kpi-main" onClick={onOpen}>
         <span className="nd-kpi-top">
           <span className="nd-kpi-ic" aria-hidden="true">{icon}</span>
           <span className="nd-kpi-label">{label}</span>
         </span>
         {loading ? <span className="nd-skel on-color" style={{ width: 120, height: 34 }} /> : <span className="nd-kpi-value">{value}</span>}
-        {delta && <span className="nd-kpi-delta">{delta}</span>}
         {sub && <span className="nd-kpi-sub">{sub}</span>}
+        {delta && <span className="nd-kpi-delta">{delta}</span>}
         <span className="nd-kpi-go">Переглянути по філіях →</span>
       </button>
-      {extra && <div className="nd-kpi-extra">{extra}</div>}
+      <div className="nd-kpi-extra">{extra || null}</div>
     </div>
   );
 }
 
-/** Картка «Філії»: стан кожної філії за період одним словом; назва веде в «Огляд філії». */
-function BranchStatus({ rows, attention, loading, onOpen }: {
-  rows: BranchRow[]; attention: AttentionItem[]; loading: boolean; onOpen: (panel: Panel) => void;
+/** Картка «Сигнали за період»: те саме джерело, що й колонка «Статус» таблиці, але списком з назвою філії;
+    невідмічені уроки згорнуто по філіях; тон — тим самим словником, що й «На зараз» (Ризик / Увага); до 5 рядків. */
+function PeriodSignals({ items, loading, failed, onRetry, onOpen }: {
+  items: AttentionItem[]; loading: boolean; failed: boolean; onRetry: () => void; onOpen: (panel: Panel) => void;
 }) {
-  return (
-    <section className="nd-card nd-list-card" aria-labelledby="nd-bs-title">
-      <header className="nd-card-head">
-        <h3 id="nd-bs-title">Стан філій</h3>
-        <span className="nd-meta">за обраний період</span>
-      </header>
-      <div className="nd-rows">
-        {loading && rows.length === 0 && <><span className="nd-skel" style={{ width: "70%" }} /><span className="nd-skel" style={{ width: "60%" }} /></>}
-        {!loading && rows.length === 0 && <div className="nd-empty">У вибраних немає активних філій</div>}
-        {rows.map((r) => {
-          const signals = branchSignals(r, attention);
-          const first = signals[0];
-          return (
-            <div className="nd-row static" key={r.tenant_id}>
-              <button type="button" className="nd-row-name" onClick={() => onOpen({ kind: "branch", branch: r.tenant_id, scope: "period" })}>
-                <b>{r.tenant_name}</b><span>Огляд філії →</span>
-              </button>
-              {first ? (
-                <button type="button" className={`nd-pill ${first.tone}`} onClick={() => onOpen({ kind: first.kind, branch: r.tenant_id, scope: "period" })}>
-                  {first.text}{signals.length > 1 && ` +${signals.length - 1}`}
-                </button>
-              ) : (
-                <span className="nd-pill ok">усе гаразд</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-/** Картка «Сигнали за період»: невідмічені уроки згорнуто по філіях, решта сигналів — як є; до 5 рядків. */
-function PeriodSignals({ items, loading, onOpen }: { items: AttentionItem[]; loading: boolean; onOpen: (panel: Panel) => void }) {
   const byTenant = new Map<number, { name: string; n: number }>();
   const others: AttentionItem[] = [];
   for (const it of items) {
@@ -609,18 +592,17 @@ function PeriodSignals({ items, loading, onOpen }: { items: AttentionItem[]; loa
       byTenant.set(it.tenant_id, cur);
     } else others.push(it);
   }
-  const rows: Array<{ key: string; tone: "warn" | "risk"; tag: string; title: string; sub: string; panel: Panel }> = [
+  const rows: Array<{ key: string; tone: "warn" | "risk"; title: string; sub: string; panel: Panel }> = [
     ...others.map((it) => ({
       key: `${it.anomaly_type}-${it.tenant_id}-${it.lesson_date ?? ""}`,
-      tone: (it.severity === "critical" || it.severity === "high" ? "risk" : "warn") as "warn" | "risk",
-      tag: (SEVERITY[it.severity] ?? SEVERITY.info).label,
+      tone: signalTone(it.severity),
       title: `${it.tenant_name}: ${lower(ANOMALY_LABELS[it.anomaly_type] ?? it.anomaly_type)}`,
       sub: it.summary,
       panel: { kind: it.anomaly_type === "ATTENDANCE_DROP" ? "attendance" : "attention", branch: it.tenant_id, scope: "period" } as Panel,
     })),
     ...[...byTenant].map(([id, x]) => ({
-      key: `unmarked-${id}`, tone: "warn" as const, tag: "Перевірити",
-      title: `${countLessons(x.n)} не відмічено`, sub: x.name,
+      key: `unmarked-${id}`, tone: "warn" as const,
+      title: `${x.name}: ${countLessons(x.n)} не відмічено`, sub: "минули без відмітки · відмітити у філії",
       panel: { kind: "unmarked", branch: id, scope: "period" } as Panel,
     })),
   ];
@@ -629,17 +611,25 @@ function PeriodSignals({ items, loading, onOpen }: { items: AttentionItem[]; loa
     <section className="nd-card nd-list-card" aria-labelledby="nd-ps-title">
       <header className="nd-card-head">
         <h3 id="nd-ps-title">Сигнали за період</h3>
-        <span className="nd-meta">{rows.length ? `${formatNumber(rows.length)} ${pluralUk(rows.length, "сигнал", "сигнали", "сигналів")}` : "за обраний період"}</span>
+        <span className="nd-meta">{rows.length ? `обраний період · ${formatNumber(rows.length)} ${pluralUk(rows.length, "сигнал", "сигнали", "сигналів")}` : "обраний період"}</span>
       </header>
       {loading ? (
         <div className="nd-rows" aria-busy="true"><span className="nd-skel" style={{ width: "76%" }} /><span className="nd-skel" style={{ width: "58%" }} /></div>
+      ) : failed ? (
+        <div className="nd-rows">
+          <div className="nd-row static" role="alert">
+            <span className="nd-pill neutral">Не завантажено</span>
+            <span className="nd-row-text"><b>сигнали за період</b><span>дані не отримано — це не «спокійно»</span></span>
+            <button type="button" className="nd-retry" onClick={onRetry}>Спробувати ще</button>
+          </div>
+        </div>
       ) : rows.length === 0 ? (
         <div className="nd-rows"><div className="nd-row static"><span className="nd-pill ok">Спокійно</span><span className="nd-row-text"><span>сигналів за період немає</span></span></div></div>
       ) : (
         <div className="nd-rows">
           {shown.map((r) => (
             <button key={r.key} type="button" className="nd-row" onClick={() => onOpen(r.panel)}>
-              <span className={`nd-pill ${r.tone}`}>{r.tag}</span>
+              <span className={`nd-pill ${r.tone}`}>{SIGNAL_TAG[r.tone]}</span>
               <span className="nd-row-text"><b>{r.title}</b><span>{r.sub}</span></span>
               <span className="nd-row-go" aria-hidden="true">→</span>
             </button>

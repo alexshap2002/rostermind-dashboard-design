@@ -5,14 +5,19 @@ import { countLessons, type Panel } from "./metrics";
 
 const SHOWN_OTHER = 3;
 
+export interface NowFailed { today: boolean; unmarked: boolean; attention: boolean }
+
 /** «На зараз» — картка зі списком: що треба зробити вже, уся мережа, останні `days` днів,
-    від обраного періоду не залежить. Кожен рядок — кнопка у свою вибірку в бічній панелі. */
-export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: {
+    від обраного періоду не залежить. Кожен рядок — кнопка у свою вибірку в бічній панелі (вікно «зараз»).
+    Якщо якийсь запит не завантажився — чесний рядок «не завантажено» з повтором, а не «усе відмічено». */
+export function NowStrip({ today, unmarked, attention, days, loading, failed, onRetry, onOpen }: {
   today: MainBranchKpi | undefined;
   unmarked: AnomalyPage | undefined;
   attention: AttentionReport | undefined;
   days: number;
   loading: boolean;
+  failed: NowFailed;
+  onRetry: () => void;
   onOpen: (panel: Panel) => void;
 }) {
   const unmarkedTotal = unmarked?.page.total ?? 0;
@@ -21,6 +26,11 @@ export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: 
   const scheduled = today?.lessons_scheduled ?? 0;
   const done = today?.lessons_completed ?? 0;
   const total = others.length + (unmarkedTotal > 0 ? 1 : 0);
+  const failedWhat = [
+    failed.unmarked ? "невідмічені уроки" : null,
+    failed.attention ? "сигнали" : null,
+    failed.today ? "розклад на сьогодні" : null,
+  ].filter(Boolean);
 
   return (
     <section className="nd-card nd-list-card" aria-labelledby="nd-now-title">
@@ -32,7 +42,7 @@ export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: 
         <div className="nd-rows" aria-busy="true"><span className="nd-skel" style={{ width: "82%" }} /><span className="nd-skel" style={{ width: "64%" }} /><span className="nd-skel" style={{ width: "70%" }} /></div>
       ) : (
         <div className="nd-rows">
-          {unmarkedTotal > 0 ? (
+          {failed.unmarked ? null : unmarkedTotal > 0 ? (
             <button type="button" className="nd-row" onClick={() => onOpen({ kind: "unmarked", branch: null, scope: "now" })}>
               <span className="nd-pill warn">Увага</span>
               <span className="nd-row-text">
@@ -47,27 +57,38 @@ export function NowStrip({ today, unmarked, attention, days, loading, onOpen }: 
               <span className="nd-row-text"><span>невідмічених уроків немає</span></span>
             </div>
           )}
-          {others.slice(0, SHOWN_OTHER).map((it, i) => {
+          {!failed.attention && others.slice(0, SHOWN_OTHER).map((it, i) => {
             const risk = it.severity === "critical" || it.severity === "high";
+            // Той самий маршрут, що й у «Сигналах за період»: падіння відвідуваності → «Відвідуваність», решта → «Потребує уваги».
+            const kind = it.anomaly_type === "ATTENDANCE_DROP" ? "attendance" : "attention";
             return (
-              <button key={i} type="button" className="nd-row" onClick={() => onOpen({ kind: "attendance", branch: it.tenant_id, scope: "now" })}>
+              <button key={i} type="button" className="nd-row" onClick={() => onOpen({ kind, branch: it.tenant_id, scope: "now" })}>
                 <span className={`nd-pill ${risk ? "risk" : "warn"}`}>{risk ? "Ризик" : "Увага"}</span>
                 <span className="nd-row-text"><b>{it.tenant_name}</b><span>{it.summary}</span></span>
                 <span className="nd-row-go" aria-hidden="true">→</span>
               </button>
             );
           })}
-          <button type="button" className="nd-row" onClick={() => onOpen({ kind: "today", branch: null, scope: "now" })}>
-            <span className="nd-pill info">Сьогодні</span>
-            <span className="nd-row-text">
-              <b>{scheduled > 0 ? `${countLessons(scheduled)} за розкладом` : "уроків немає"}</b>
-              {scheduled > 0 && <span>{formatNumber(done)} проведено · {formatNumber(Math.max(0, scheduled - done))} попереду або без відмітки</span>}
-            </span>
-            <span className="nd-row-go" aria-hidden="true">→</span>
-          </button>
+          {!failed.today && (
+            <button type="button" className="nd-row" onClick={() => onOpen({ kind: "today", branch: null, scope: "now" })}>
+              <span className="nd-pill info">Сьогодні</span>
+              <span className="nd-row-text">
+                <b>{scheduled > 0 ? `${countLessons(scheduled)} за розкладом` : "уроків немає"}</b>
+                {scheduled > 0 && <span>{formatNumber(done)} проведено · {formatNumber(Math.max(0, scheduled - done))} попереду або без відмітки</span>}
+              </span>
+              <span className="nd-row-go" aria-hidden="true">→</span>
+            </button>
+          )}
+          {failedWhat.length > 0 && (
+            <div className="nd-row static" role="alert">
+              <span className="nd-pill neutral">Не завантажено</span>
+              <span className="nd-row-text"><b>{failedWhat.join(", ")}</b><span>дані не отримано — це не «нуль»</span></span>
+              <button type="button" className="nd-retry" onClick={onRetry}>Спробувати ще</button>
+            </div>
+          )}
         </div>
       )}
-      {!loading && others.length > SHOWN_OTHER && (
+      {!loading && !failed.attention && others.length > SHOWN_OTHER && (
         <button type="button" className="nd-card-link" onClick={() => onOpen({ kind: "attention", branch: null, scope: "now" })}>
           Переглянути всі сигнали ({formatNumber(total)}) →
         </button>
