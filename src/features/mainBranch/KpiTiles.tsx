@@ -41,8 +41,8 @@ export function KpiTiles({ k, noCompare, onOpen }: Props) {
           <>
             {k.lessons_unmarked_overdue > 0
               ? <button type="button" className="nd-tile-chip warn" onClick={() => onOpen({ kind: "unmarked", branch: null, scope: "period" })}>{formatNumber(k.lessons_unmarked_overdue)} не відмічено</button>
-              : <span className="nd-tile-chip">усі відмічено</span>}
-            {k.lessons_upcoming > 0 && <span className="nd-tile-chip">{formatNumber(k.lessons_upcoming)} попереду</span>}
+              : <span className="nd-tile-chip static">усі відмічено</span>}
+            {k.lessons_upcoming > 0 && <span className="nd-tile-chip static">{formatNumber(k.lessons_upcoming)} попереду</span>}
           </>
         )} />
 
@@ -64,7 +64,8 @@ function Tile({ tone, label, value, sub, bar, extra, loading, onOpen }: {
 }) {
   return (
     <div className={`nd-tile ${tone}`}>
-      <button type="button" className="nd-tile-main" onClick={onOpen} aria-label={`${label}: переглянути по філіях`}>
+      {/* Без aria-label: ім'я кнопки — її вміст (назва, число, зміна, «Переглянути по філіях»). */}
+      <button type="button" className="nd-tile-main" onClick={onOpen}>
         <span className="nd-tile-head">
           <span className="nd-tile-label">{label}</span>
           <span className="nd-tile-go" aria-hidden="true"><IconArrowUpRight /></span>

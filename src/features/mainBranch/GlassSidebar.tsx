@@ -1,11 +1,16 @@
+import type React from "react";
 import { formatNumber, pluralUk } from "../../lib/format";
-import { IconDownload } from "../../lib/icons";
+import { IconCheck, IconDownload } from "../../lib/icons";
 import type { MainBranchFilters } from "./api";
 
 export type PresetKey = "today" | "week" | "month" | "prev";
 export interface PresetItem { key: PresetKey; label: string; meta: string }
-export type BranchTone = "ok" | "warn" | "risk";
+/** none — стан ще не завантажено (нейтрально, а не «усе гаразд»). */
+export type BranchTone = "ok" | "warn" | "risk" | "none";
 export interface SidebarBranch { id: number; name: string; students: number | null; tone: BranchTone; status: string }
+
+/** Значок стану з формою, не лише кольором: ✓ гаразд · ! є сигнали · ▼ відвідуваність впала. */
+const STATE_GLYPH: Record<BranchTone, React.ReactNode> = { ok: <IconCheck />, warn: "!", risk: "▼", none: "" };
 
 interface Props {
   presets: PresetItem[];
@@ -66,15 +71,18 @@ export function GlassSidebar({
             <span className="nd-side-meta">{totalStudents === null ? (branchesLoading ? "…" : "—") : formatNumber(totalStudents)}</span>
           </label>
           {branches.map((b) => (
-            <label key={b.id} className={`nd-side-item nd-side-check${!all && filters.branchIds.includes(b.id) ? " on" : ""}`} title={b.status}>
+            <label key={b.id} className={`nd-side-item nd-side-check${!all && filters.branchIds.includes(b.id) ? " on" : ""}`}>
               <input type="checkbox" checked={!all && filters.branchIds.includes(b.id)} onChange={() => onToggleBranch(b.id)} />
-              <span className={`nd-dot ${b.tone}`} aria-hidden="true" />
-              <span className="nd-side-name">{b.name}<span className="sr-only"> — {b.status}</span></span>
+              <span className={`nd-state ${b.tone}`} aria-hidden="true">{STATE_GLYPH[b.tone]}</span>
+              <span className="nd-side-text">
+                <span className="nd-side-name">{b.name}</span>
+                {b.status && <span className={`nd-side-status ${b.tone}`}>{b.status}</span>}
+              </span>
               <span className="nd-side-meta">{b.students === null ? (branchesLoading ? "…" : "—") : formatNumber(b.students)}</span>
             </label>
           ))}
         </div>
-        <p className="nd-side-hint">Число — діти в базі за період · крапка — стан філії</p>
+        <p className="nd-side-hint">Число — діти в базі на кінець періоду · стан — за останні 30 днів</p>
       </section>
 
       <div className="nd-side-foot">

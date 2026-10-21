@@ -1294,7 +1294,7 @@ button.dd-item:disabled { cursor: progress; opacity: .7; }
 body.theme-glass {
   --bg: #161b29; --surface: #1e2334; --line: rgba(255,255,255,.12);
   --ink: #0d1019; --ink-2: #1a1f2d; --ink-3: #272d3f;
-  --text: #f3f4f8; --text-2: #c7cbd6; --text-3: #a3a9b8; --text-4: #868da0;
+  --text: #f3f4f8; --text-2: #c7cbd6; --text-3: #c3c8d4; --text-4: #b0b6c5;
   --terra: #ff9a6c; --terra-deep: #ffb08a; --terra-soft: rgba(255,154,108,.16); --terra-on: #ffb08a;
   --olive: #b6ecaa; --olive-text: #b6ecaa; --olive-soft: rgba(120,200,110,.18);
   --gold: #ffd98a; --gold-text: #ffd98a; --gold-soft: rgba(255,200,100,.18);
@@ -1309,6 +1309,11 @@ body.theme-glass {
   --tile-yellow: #f6df6a; --tile-orange: #f9ad67; --tile-green: #b9e97a; --tile-blue: #8fcdf6;
   --tile-ink: #16171d; --tile-ink-2: #3c3d46; --tile-track: rgba(22,23,29,.14); --tile-chip: rgba(255,255,255,.55);
   --chart-line: #cfe3ff; --chart-bar: rgba(255,255,255,.26); --chart-bar-on: #ffb08a;
+  /* решта поверхонь варіанту — теж токенами (CLAUDE.md п. 3) */
+  --focus: var(--gold); --nav-glass: rgba(13,16,25,.78); --glass-opaque: rgba(28,33,49,.9);
+  --glass-faint: rgba(255,255,255,.05); --glass-strong: rgba(255,255,255,.2);
+  --tile-ok-text: #1d5a2a; --tile-risk-text: #8a1f3a; --tile-track-2: rgba(22,23,29,.24);
+  --chart-grid: rgba(255,255,255,.1); --chart-cross: rgba(255,255,255,.35); --scrim: rgba(0,0,0,.55);
   color-scheme: dark;
   background: var(--bg); color: var(--text);
 }
@@ -1316,28 +1321,31 @@ body.theme-glass {
 body.theme-glass::before {
   content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(760px 560px at 10% 6%, rgba(132,104,255,.50), transparent 64%),
-    radial-gradient(820px 580px at 90% 14%, rgba(255,150,90,.34), transparent 64%),
-    radial-gradient(1000px 700px at 50% 108%, rgba(80,200,255,.34), transparent 64%),
+    radial-gradient(760px 560px at 10% 6%, rgba(132,104,255,.28), transparent 64%),
+    radial-gradient(820px 580px at 90% 14%, rgba(255,150,90,.26), transparent 64%),
+    radial-gradient(1000px 700px at 50% 108%, rgba(80,200,255,.26), transparent 64%),
     radial-gradient(1200px 800px at 50% 50%, rgba(255,255,255,.05), transparent 70%),
     var(--bg);
 }
-body.theme-glass :focus-visible { outline-color: #ffd98a; }
+body.theme-glass :focus-visible { outline-color: var(--focus); }
+/* На пастельних плитках жовте кільце невидиме — усі кнопки плитки отримують темне */
+body.theme-glass .nd-tile :focus-visible { outline-color: var(--tile-ink); outline-offset: 2px; }
+body.theme-glass .nd-tile-main:focus-visible { outline: 2.5px solid var(--tile-ink); outline-offset: -4px; }
 /* Глобальні класи з хардкод-кольорами, які є на сторінці */
-body.theme-glass .topnav { background: rgba(13,16,25,.78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--glass-line); }
+body.theme-glass .topnav { background: var(--nav-glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--glass-line); }
 body.theme-glass .nav > a.active, body.theme-glass .navdd > button.cur { color: var(--tile-ink); }
 body.theme-glass .btn { color: var(--tile-ink); }
 body.theme-glass .btn:hover { background: var(--terra-deep); color: var(--tile-ink); }
 body.theme-glass .btn.ghost { background: var(--glass); color: var(--text-2); border-color: var(--glass-line-strong); }
 body.theme-glass .btn.ghost:hover { background: var(--glass-2); color: var(--text); }
-body.theme-glass .seg { background: rgba(255,255,255,.08); }
+body.theme-glass .seg { background: var(--glass); }
 body.theme-glass .seg button { color: var(--text-2); }
-body.theme-glass .seg button.on { background: rgba(255,255,255,.2); color: var(--text); }
+body.theme-glass .seg button.on { background: var(--glass-strong); color: var(--text); }
 body.theme-glass .table-card { background: transparent; border-color: var(--glass-line); box-shadow: none; animation: none; }
-body.theme-glass .dtable th { background: rgba(255,255,255,.04); color: var(--text-3); font-size: 12px; text-transform: none; letter-spacing: 0; }
+body.theme-glass .dtable th { background: var(--glass-faint); color: var(--text-3); font-size: 12px; text-transform: none; letter-spacing: 0; }
 body.theme-glass .dtable td { border-bottom-color: var(--glass-line); }
-body.theme-glass .dtable tbody tr:hover { background: rgba(255,255,255,.04); }
-body.theme-glass .dtable tfoot td, body.theme-glass .nw-table tfoot td { background: rgba(255,255,255,.05); border-top-color: var(--glass-line-strong); }
+body.theme-glass .dtable tbody tr:hover { background: var(--glass-faint); }
+body.theme-glass .dtable tfoot td, body.theme-glass .nw-table tfoot td { background: var(--glass-faint); border-top-color: var(--glass-line-strong); }
 body.theme-glass .mb-chip { background: var(--glass); }
 body.theme-glass .mb-chip.on { color: var(--tile-ink); }
 body.theme-glass .tselect { background: var(--glass); color: var(--text-2); border-color: var(--glass-line-strong); }
@@ -1357,10 +1365,13 @@ body.theme-glass .dd { background: var(--surface); color: var(--text); box-shado
 body.theme-glass .dd-item:hover { background: var(--glass-2); }
 body.theme-glass .dd-sep { background: var(--glass-line); }
 body.theme-glass .login-card, body.theme-glass .table-empty { color: var(--text-2); }
+/* Бриф §6: стандартна кнопка 40–44 px — і для малих кнопок варіанту */
+body.theme-glass .btn.sm { min-height: 40px; padding-inline: 14px; }
+@media (pointer: coarse) { body.theme-glass .btn.sm { min-height: 44px; } }
 
 /* Скляна панель */
 .nd-panel { background: var(--glass); border: 1px solid var(--glass-line); border-radius: 22px; box-shadow: var(--shadow); backdrop-filter: blur(18px) saturate(1.25); -webkit-backdrop-filter: blur(18px) saturate(1.25); min-width: 0; }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .nd-panel, .nd-side, .nd-ev { background: rgba(28,33,49,.9); } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .nd-panel, .nd-side, .nd-ev { background: var(--glass-opaque); } }
 .nd-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; padding: 18px 22px 8px; }
 .nd-panel-head h3 { font-size: 16px; font-weight: 700; }
 .nd-panel-head p { font-size: 13px; color: var(--text-3); max-width: 60ch; }
@@ -1374,8 +1385,8 @@ body.theme-glass .login-card, body.theme-glass .table-empty { color: var(--text-
 .nd-branches-wrap { grid-area: branches; }
 .nd-trend { grid-area: trend; }
 .nd-details { grid-area: details; }
-.nd-skel { display: inline-block; height: 18px; border-radius: 6px; background: linear-gradient(90deg, rgba(255,255,255,.08), rgba(255,255,255,.16), rgba(255,255,255,.08)); background-size: 200% 100%; animation: nd-shimmer 1.2s linear infinite; }
-.nd-skel.dark { background: linear-gradient(90deg, rgba(22,23,29,.1), rgba(22,23,29,.2), rgba(22,23,29,.1)); background-size: 200% 100%; }
+.nd-skel { display: inline-block; height: 18px; border-radius: 6px; background: linear-gradient(90deg, var(--glass), var(--glass-2), var(--glass)); background-size: 200% 100%; animation: nd-shimmer 1.2s linear infinite; }
+.nd-skel.dark { background: linear-gradient(90deg, var(--tile-track), var(--tile-track-2), var(--tile-track)); background-size: 200% 100%; }
 @keyframes nd-shimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .nd-skel { animation: none; } }
 .nd-empty { padding: 20px; color: var(--text-3); font-size: 14px; }
@@ -1393,7 +1404,7 @@ body.theme-glass .login-card, body.theme-glass .table-empty { color: var(--text-
 /* Ліва панель */
 .nd-side { background: var(--glass); border: 1px solid var(--glass-line); border-radius: 22px; box-shadow: var(--shadow); backdrop-filter: blur(18px) saturate(1.25); -webkit-backdrop-filter: blur(18px) saturate(1.25); padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 16px; }
 .nd-side-block { display: flex; flex-direction: column; gap: 6px; }
-.nd-side-title { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); padding: 2px 10px; display: flex; justify-content: space-between; }
+.nd-side-title { font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); padding: 2px 10px; display: flex; justify-content: space-between; }
 .nd-side-count { font-weight: 600; letter-spacing: 0; }
 .nd-side-list { display: flex; flex-direction: column; gap: 2px; }
 .nd-side-item { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 10px; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 600; color: var(--text-2); background: none; border: 1px solid transparent; text-align: left; cursor: pointer; }
@@ -1404,18 +1415,25 @@ body.theme-glass .login-card, body.theme-glass .table-empty { color: var(--text-
 .nd-preset .nd-side-label { flex: 1 1 100%; line-height: 1.25; }
 .nd-preset .nd-side-meta { flex: 1 1 100%; line-height: 1.25; }
 .nd-side-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nd-side-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.nd-side-status { font-size: 12px; font-weight: 500; color: var(--text-3); line-height: 1.2; }
+.nd-side-status.warn { color: var(--warn-text); }
+.nd-side-status.risk { color: var(--risk-text); }
 .nd-side-meta { font-size: 12px; font-weight: 500; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .nd-side-item.on .nd-side-meta { color: var(--text-2); }
 .nd-side-check input { width: 16px; height: 16px; accent-color: var(--terra); flex-shrink: 0; margin: 0; }
-.nd-dot { width: 8px; height: 8px; border-radius: 99px; flex: 0 0 8px; background: var(--ok-text); }
-.nd-dot.warn { background: var(--warn-text); }
-.nd-dot.risk { background: var(--risk-text); }
-.nd-side-hint { font-size: 11.5px; color: var(--text-4); padding: 4px 10px 0; line-height: 1.4; }
+/* Стан філії: форма значка + текст поруч, не лише колір (✓ гаразд · ! є невідмічені · ▼ відвідуваність впала) */
+.nd-state { width: 18px; height: 18px; border-radius: 99px; flex: 0 0 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; line-height: 1; background: var(--ok-soft); color: var(--ok-text); }
+.nd-state svg { width: 11px; height: 11px; stroke-width: 3; }
+.nd-state.warn { background: var(--warn-soft); color: var(--warn-text); }
+.nd-state.risk { background: var(--risk-soft); color: var(--risk-text); font-size: 9px; }
+.nd-state.none { background: var(--glass-2); color: var(--text-3); }
+.nd-side-hint { font-size: 12.5px; color: var(--text-3); padding: 4px 10px 0; line-height: 1.4; }
 .nd-dates { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px 2px; }
 .nd-dates label { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 13px; color: var(--text-3); }
 .nd-dates input { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--glass-line-strong); border-radius: 10px; background: var(--glass); color: var(--text); min-height: 38px; width: 100%; max-width: 150px; }
 .nd-side-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 10px 0; border-top: 1px solid var(--glass-line); }
-.nd-side-updated { font-size: 11.5px; color: var(--text-4); width: 100%; }
+.nd-side-updated { font-size: 12.5px; color: var(--text-3); width: 100%; }
 
 /* Плитки показників */
 .nd-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -1427,7 +1445,6 @@ body.theme-glass .login-card, body.theme-glass .table-empty { color: var(--text-
 .nd-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
 @media (prefers-reduced-motion: reduce) { .nd-tile, .nd-tile:hover { transform: none; transition: none; } }
 .nd-tile-main { display: flex; flex-direction: column; gap: 6px; align-items: stretch; text-align: left; font: inherit; color: inherit; background: none; border: none; padding: 16px 18px 12px; cursor: pointer; border-radius: 22px; flex: 1; }
-.nd-tile-main:focus-visible { outline: 2.5px solid var(--tile-ink); outline-offset: -4px; }
 .nd-tile-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .nd-tile-label { font-size: 13.5px; font-weight: 700; }
 .nd-tile-go { width: 30px; height: 30px; border-radius: 99px; background: var(--tile-chip); display: inline-flex; align-items: center; justify-content: center; color: var(--tile-ink); flex-shrink: 0; }
@@ -1436,28 +1453,30 @@ body.theme-glass .login-card, body.theme-glass .table-empty { color: var(--text-
 .nd-tile-value small { font-size: 16px; font-weight: 700; color: var(--tile-ink-2); letter-spacing: 0; }
 .nd-tile-sub { font-size: 13px; color: var(--tile-ink-2); font-weight: 500; }
 .nd-tile .nd-delta { color: var(--tile-ink); font-weight: 700; }
-.nd-tile .nd-delta.ok { color: #1d5a2a; }
-.nd-tile .nd-delta.risk { color: #8a1f3a; }
+.nd-tile .nd-delta.ok { color: var(--tile-ok-text); }
+.nd-tile .nd-delta.risk { color: var(--tile-risk-text); }
 .nd-tile .nd-delta-sfx { color: var(--tile-ink-2); }
 .nd-tile-bar { display: block; height: 8px; border-radius: 99px; background: var(--tile-track); overflow: hidden; margin-top: 6px; }
 .nd-tile-bar > span { display: block; height: 100%; border-radius: 99px; background: var(--tile-ink); }
 .nd-tile-cta { font-size: 12.5px; font-weight: 700; color: var(--tile-ink); margin-top: 2px; opacity: .85; }
 .nd-tile-main:hover .nd-tile-cta { text-decoration: underline; opacity: 1; }
 .nd-tile-extra { padding: 0 18px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
-.nd-tile-chip { display: inline-flex; align-items: center; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--tile-ink); background: var(--tile-chip); border: none; border-radius: 99px; padding: 6px 11px; min-height: 32px; }
+.nd-tile-chip { display: inline-flex; align-items: center; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--tile-ink); background: var(--tile-chip); border: none; border-radius: 99px; padding: 8px 14px; min-height: 40px; }
 button.nd-tile-chip { cursor: pointer; }
+/* Статичний чип («5 попереду») — не кнопка, тож і не виглядає як пігулка */
+.nd-tile-chip.static { background: none; padding-inline: 4px; color: var(--tile-ink-2); }
 button.nd-tile-chip:hover { text-decoration: underline; }
-.nd-tile-chip.warn::before { content: "!"; display: inline-flex; width: 16px; height: 16px; border-radius: 99px; background: var(--tile-ink); color: #fff; font-size: 11px; align-items: center; justify-content: center; margin-right: 6px; }
+.nd-tile-chip.warn::before { content: "!"; display: inline-flex; width: 16px; height: 16px; border-radius: 99px; background: var(--tile-ink); color: var(--text); font-size: 11px; align-items: center; justify-content: center; margin-right: 6px; }
 
 /* Події (права колонка) */
 .nd-feed-title { font-size: 16px; font-weight: 700; padding: 6px 4px 0; }
 .nd-feed-group { display: flex; flex-direction: column; gap: 8px; }
 .nd-feed-sub { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); padding: 0 4px; display: flex; flex-direction: column; gap: 1px; }
-.nd-feed-sub span { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-4); }
+.nd-feed-sub span { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-3); }
 .nd-feed-list { display: flex; flex-direction: column; gap: 8px; }
 .nd-ev { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "tag title go" "sub sub go"; column-gap: 8px; row-gap: 3px; align-items: center; text-align: left; font: inherit; color: var(--text); background: var(--glass); border: 1px solid var(--glass-line); border-radius: 16px; padding: 10px 12px 10px 14px; cursor: pointer; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); min-height: 44px; width: 100%; }
 button.nd-ev:hover { background: var(--glass-2); border-color: var(--glass-line-strong); }
-.nd-ev-tag { grid-area: tag; justify-self: start; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: var(--glass-2); color: var(--text-2); white-space: nowrap; }
+.nd-ev-tag { grid-area: tag; justify-self: start; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: var(--glass-2); color: var(--text-2); white-space: nowrap; }
 .nd-ev.warn .nd-ev-tag { background: var(--warn-soft); color: var(--warn-text); }
 .nd-ev.risk .nd-ev-tag { background: var(--risk-soft); color: var(--risk-text); }
 .nd-ev.info .nd-ev-tag { background: var(--info-soft); color: var(--info-text); }
@@ -1468,12 +1487,15 @@ button.nd-ev:hover { background: var(--glass-2); border-color: var(--glass-line-
 .nd-ev.ok .nd-ev-sub { grid-area: sub; }
 .nd-ev.ok svg { grid-area: ic; width: 18px; height: 18px; color: var(--ok-text); }
 .nd-ev.ok b { color: var(--ok-text); }
-.nd-feed-all { font: inherit; font-size: 13px; font-weight: 700; color: var(--terra-deep); background: none; border: none; padding: 8px 4px; text-align: left; cursor: pointer; }
+.nd-ev.err { background: var(--risk-soft); }
+.nd-ev.err svg, .nd-ev.err b { color: var(--risk-text); }
+.nd-feed-note { font-size: 13px; color: var(--text-3); padding: 2px 4px; line-height: 1.4; }
+.nd-feed-all { display: inline-flex; align-items: center; min-height: 40px; font: inherit; font-size: 13px; font-weight: 700; color: var(--terra-deep); background: none; border: none; padding: 8px 4px; text-align: left; cursor: pointer; align-self: start; }
 .nd-feed-all:hover { text-decoration: underline; }
 
 /* Пігулки, зміни */
 .nd-pill { display: inline-flex; align-items: center; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 4px 10px; min-height: 28px; background: var(--glass-2); color: var(--text-2); border: none; white-space: nowrap; }
-button.nd-pill { cursor: pointer; }
+button.nd-pill { cursor: pointer; min-height: 40px; padding: 8px 14px; }
 button.nd-pill:hover { text-decoration: underline; }
 .nd-pill.warn { background: var(--warn-soft); color: var(--warn-text); }
 .nd-pill.risk { background: var(--risk-soft); color: var(--risk-text); }
@@ -1482,10 +1504,10 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-delta.ok { color: var(--ok-text); }
 .nd-delta.risk { color: var(--risk-text); }
 .nd-delta-sfx { font-weight: 500; color: var(--text-3); }
-.nd-seg { display: inline-flex; background: rgba(255,255,255,.08); border-radius: 12px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.nd-seg { display: inline-flex; background: var(--glass); border-radius: 12px; padding: 3px; gap: 2px; flex-wrap: wrap; }
 .nd-seg button { border: none; background: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--text-2); padding: 8px 14px; min-height: 38px; border-radius: 9px; cursor: pointer; }
-.nd-seg button:hover { color: var(--text); background: rgba(255,255,255,.06); }
-.nd-seg button.on { background: rgba(255,255,255,.2); color: var(--text); }
+.nd-seg button:hover { color: var(--text); background: var(--glass-faint); }
+.nd-seg button.on { background: var(--glass-strong); color: var(--text); }
 .nd-seg.sm button { font-size: 13px; padding: 6px 12px; min-height: 34px; }
 
 /* Таблиця філій (у скляній панелі) і таблиці панелі розбивок */
@@ -1493,7 +1515,7 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-table-scroll { overflow-x: auto; position: relative; }
 .nd-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .nd-table th, .nd-table td { padding: 12px 14px; border-bottom: 1px solid var(--glass-line); text-align: left; vertical-align: middle; }
-.nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; background: rgba(255,255,255,.04); }
+.nd-table thead th { font-size: 12.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; background: var(--glass-faint); }
 .nd-branches .nd-table thead th:first-child { padding-left: 22px; }
 .nd-branches .nd-table th:first-child, .nd-branches .nd-table td:first-child { padding-left: 22px; }
 .nd-branches .nd-table th:last-child, .nd-branches .nd-table td:last-child { padding-right: 22px; }
@@ -1502,8 +1524,8 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-branches .nd-table tfoot td:last-child { border-bottom-right-radius: 22px; }
 .nd-table .r { text-align: right; }
 .nd-table td.r, .nd-table th.r { font-variant-numeric: tabular-nums; }
-.nd-table tbody tr:hover { background: rgba(255,255,255,.04); }
-.nd-table tfoot th, .nd-table tfoot td, .nd-table .nd-total th, .nd-table .nd-total td { font-weight: 700; background: rgba(255,255,255,.05); border-bottom: none; }
+.nd-table tbody tr:hover { background: var(--glass-faint); }
+.nd-table tfoot th, .nd-table tfoot td, .nd-table .nd-total th, .nd-table .nd-total td { font-weight: 700; background: var(--glass-faint); border-bottom: none; }
 .nd-table.compact th, .nd-table.compact td { padding: 9px 10px; font-size: 13.5px; }
 .nd-table .th-sort { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-3); background: none; border: none; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; padding: 4px 0; }
 .nd-table .th-sort.on { color: var(--text); }
@@ -1512,7 +1534,7 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-branch-name { font: inherit; font-size: 15px; font-weight: 700; color: var(--text); background: none; border: none; cursor: pointer; text-align: left; display: flex; flex-direction: column; padding: 2px 0; }
 .nd-branch-hint { font-size: 12px; font-weight: 500; color: var(--terra-deep); }
 .nd-branch-name:hover .nd-branch-hint { text-decoration: underline; }
-.nd-cell { font: inherit; color: inherit; background: none; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; margin: -6px -8px; cursor: pointer; text-align: inherit; font-variant-numeric: tabular-nums; }
+.nd-cell { display: inline-block; min-height: 40px; font: inherit; color: inherit; background: none; border: 1px solid transparent; border-radius: 8px; padding: 8px 8px; margin: -8px -8px; cursor: pointer; text-align: inherit; font-variant-numeric: tabular-nums; vertical-align: middle; }
 .nd-cell:hover { border-color: var(--glass-line-strong); background: var(--glass); text-decoration: underline; text-decoration-color: var(--text-4); }
 .nd-cell.warn { color: var(--warn-text); font-weight: 700; }
 .nd-stack { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
@@ -1530,13 +1552,13 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-key { display: inline-block; vertical-align: middle; margin-right: 6px; }
 .nd-key.line { width: 18px; height: 3px; border-radius: 2px; background: var(--chart-line); }
 .nd-key.bar { width: 10px; height: 12px; border-radius: 2px; background: var(--chart-bar); }
-.nd-grid { stroke: rgba(255,255,255,.1); stroke-width: 1; }
+.nd-grid { stroke: var(--chart-grid); stroke-width: 1; }
 .nd-axis { font-size: 12px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
 .nd-line { fill: none; stroke: var(--chart-line); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
 .nd-dot { fill: var(--chart-line); stroke: var(--bg); stroke-width: 2; }
 .nd-bar { fill: var(--chart-bar); }
 .nd-bar.on { fill: var(--chart-bar-on); }
-.nd-cross { stroke: rgba(255,255,255,.35); stroke-dasharray: 3 3; }
+.nd-cross { stroke: var(--chart-cross); stroke-dasharray: 3 3; }
 .nd-tip { position: absolute; top: 6px; transform: translateX(-50%); background: var(--ink); color: var(--text); border: 1px solid var(--glass-line); border-radius: 10px; padding: 8px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; white-space: nowrap; z-index: 2; }
 .nd-table-alt { margin-top: 10px; font-size: 13px; }
 .nd-table-alt summary { cursor: pointer; color: var(--terra-deep); font-weight: 600; padding: 6px 0; }
@@ -1554,7 +1576,7 @@ button.nd-pill:hover { text-decoration: underline; }
 
 /* Бічна панель розбивок */
 .nd-drawer-wrap { position: fixed; inset: 0; z-index: 80; }
-.nd-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.55); border: none; cursor: default; }
+.nd-scrim { position: absolute; inset: 0; background: var(--scrim); border: none; cursor: default; }
 .nd-drawer { position: absolute; top: 0; right: 0; height: 100%; width: min(560px, 100%); background: var(--surface); border-left: 1px solid var(--glass-line); box-shadow: -8px 0 32px rgba(0,0,0,.5); display: flex; flex-direction: column; animation: nd-slide .2s ease-out; }
 @keyframes nd-slide { from { transform: translateX(24px); opacity: .6; } }
 @media (prefers-reduced-motion: reduce) { .nd-drawer { animation: none; } }
@@ -1569,7 +1591,7 @@ button.nd-pill:hover { text-decoration: underline; }
 .nd-drawer-body { overflow-y: auto; padding: 16px 20px 28px; display: flex; flex-direction: column; gap: 14px; }
 .nd-note { font-size: 13.5px; color: var(--text-2); line-height: 1.5; }
 .nd-note.muted { color: var(--text-3); font-size: 13px; }
-.nd-go { font: inherit; font-size: 13px; font-weight: 600; color: var(--terra-deep); background: none; border: none; cursor: pointer; padding: 6px 0; white-space: nowrap; }
+.nd-go { display: inline-flex; align-items: center; min-height: 40px; font: inherit; font-size: 13px; font-weight: 600; color: var(--terra-deep); background: none; border: none; cursor: pointer; padding: 6px 0; white-space: nowrap; }
 .nd-go:hover { text-decoration: underline; }
 .nd-go:disabled { color: var(--text-4); cursor: default; }
 .nd-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
@@ -1597,9 +1619,17 @@ button.nd-signal:hover { border-color: var(--glass-line-strong); background: var
 .nd-signal.wide { width: 100%; }
 
 /* Адаптив */
+@media (max-width: 1300px) {
+  /* Таблиця філій щільніша, щоб «Увага» і «Працювати у філії» не йшли у внутрішній скрол на 1024–1280 */
+  .nd-branches .nd-table th, .nd-branches .nd-table td { padding: 10px 8px; }
+  .nd-branches .nd-table thead th:first-child, .nd-branches .nd-table th:first-child, .nd-branches .nd-table td:first-child { padding-left: 14px; }
+  .nd-branches .nd-table th:last-child, .nd-branches .nd-table td:last-child { padding-right: 14px; }
+}
 @media (max-width: 1200px) {
-  .nd-glass { grid-template-columns: 240px minmax(0, 1fr); grid-template-areas: "side main" "side feed" "side branches" "side trend" "side details"; }
+  /* Стрічка подій під центром; таблиця, графік і звіти — на всю ширину, під лівою панеллю */
+  .nd-glass { grid-template-columns: 240px minmax(0, 1fr); grid-template-areas: "side main" "side feed" "branches branches" "trend trend" "details details"; }
   .nd-feed-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .nd-feed-all, .nd-feed-note { grid-column: 1 / -1; justify-self: start; }
 }
 @media (max-width: 1000px) {
   .nd-glass { grid-template-columns: minmax(0, 1fr); grid-template-areas: "side" "main" "feed" "branches" "trend" "details"; gap: 16px; }
@@ -1608,23 +1638,27 @@ button.nd-signal:hover { border-color: var(--glass-line-strong); background: var
   .nd-side-block { flex: 1 1 320px; }
   .nd-side-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
   .nd-side-item { min-height: 36px; padding: 0 12px; border-radius: 99px; background: var(--glass); border-color: var(--glass-line); font-size: 13px; }
-  .nd-side-item > span:first-of-type, .nd-side-name { flex: none; }
+  .nd-side-item > span:first-of-type, .nd-side-name, .nd-side-text { flex: none; }
+  .nd-side-text { flex-direction: row; align-items: baseline; gap: 6px; }
   .nd-side-item .nd-side-meta { display: none; }
-  .nd-side-check .nd-side-meta { display: inline; }
+  /* Чипи світліші за панель (скло на склі над плямою) — число в них світлішим текстом, щоб лишалось ≥ 4,5:1 */
+  .nd-side-check .nd-side-meta { display: inline; color: var(--text-2); }
+  .nd-side-item.on .nd-side-meta { color: var(--text); }
   .nd-side-hint { display: none; }
   .nd-dates { flex-direction: row; flex-wrap: wrap; padding: 6px 0 0; width: 100%; }
   .nd-side-foot { border-top: none; padding: 0; margin-left: auto; align-self: center; }
   .nd-side-updated { width: auto; }
-}
-@media (max-width: 900px) {
-  /* Таблиця філій → картки з тими самими полями й переходами */
+  /* Таблиця філій → картки з тими самими полями й переходами (однакові відступи для всіх полів) */
   .nd-branches .nd-table thead { display: none; }
   .nd-branches .nd-table, .nd-branches .nd-table tbody, .nd-branches .nd-table tfoot, .nd-branches .nd-table tr { display: block; }
   .nd-branches .nd-table tr { padding: 12px 16px; border-bottom: 1px solid var(--glass-line); }
-  .nd-branches .nd-table tfoot tr { border-bottom: none; background: rgba(255,255,255,.05); border-radius: 0 0 22px 22px; }
+  .nd-branches .nd-table tfoot tr { border-bottom: none; background: var(--glass-faint); border-radius: 0 0 22px 22px; }
   .nd-branches .nd-table th, .nd-branches .nd-table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: none; padding: 6px 0; text-align: right; background: none; }
-  .nd-branches .nd-table td::before, .nd-branches .nd-table tfoot th::before { content: attr(data-label); font-size: 13px; color: var(--text-3); text-align: left; }
+  .nd-branches .nd-table th:first-child, .nd-branches .nd-table td:first-child { padding-left: 0; }
+  .nd-branches .nd-table th:last-child, .nd-branches .nd-table td:last-child { padding-right: 0; }
+  .nd-branches .nd-table td::before { content: attr(data-label); font-size: 13px; color: var(--text-3); text-align: left; }
   .nd-branches .nd-table tbody th { padding-bottom: 8px; }
+  .nd-branches .nd-table tfoot th { justify-content: flex-start; font-size: 15px; padding-bottom: 8px; }
   .nd-branches .nd-table td:empty { display: none; }
   .nd-branches .nd-act { justify-content: flex-start; }
 }

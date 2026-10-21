@@ -13,7 +13,7 @@ import { DEMO } from "../../demo/mockApi";
 import { mainBranchExportUrl, mainBranchQueries, UNMARKED_LESSON, type MainBranchFilters, type MainBranchKpi } from "./api";
 import { BranchCompare } from "./BranchCompare";
 import { EventsFeed } from "./EventsFeed";
-import { GlassSidebar, type PresetItem, type PresetKey, type SidebarBranch } from "./GlassSidebar";
+import { GlassSidebar, type BranchTone, type PresetItem, type PresetKey, type SidebarBranch } from "./GlassSidebar";
 import { KpiTiles } from "./KpiTiles";
 import { PANEL_KINDS, type Panel, type PanelKind } from "./metrics";
 import { MetricPanel } from "./MetricPanel";
@@ -222,6 +222,8 @@ export function MainBranchPage() {
   const periodAttention = useQuery({ ...mainBranchQueries.attention(filters), enabled: enabled("attention") });
   const attention = useQuery({ ...mainBranchQueries.attention(nowFilters), enabled: enabled("attention") });
   const todayKpi = useQuery({ ...mainBranchQueries.kpi(todayFilters), enabled: enabled("kpi") });
+  // Сигнал із «На зараз» відкриває розбивку за тим самим вікном (останні 30 днів, усі філії), а не за обраний період.
+  const nowKpi = useQuery({ ...mainBranchQueries.kpi(nowFilters), enabled: enabled("kpi") });
   const unmarked = useQuery({ ...mainBranchQueries.anomalies(nowFilters, 0, 100, { type: UNMARKED_LESSON }), enabled: enabled("anomalies") });
 
   const activeBranches = (network.data?.branches ?? []).filter((b) => b.lifecycle_status === "active");
@@ -309,20 +311,28 @@ export function MainBranchPage() {
     ? `Усі філії (${formatNumber(activeBranches.length)})`
     : selectedNames.length === 1 ? String(selectedNames[0]) : `${formatNumber(selectedNames.length)} ${pluralUk(selectedNames.length, "філія", "філії", "філій")}`;
   const noCompare = Boolean(k && !k.comparison.previous_period);
-  const failed = [kpi, trends, attention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
-  const attentionByTenant = periodAttention.data?.totals.by_tenant ?? {};
+  const failed = [kpi, kpiAll, nowKpi, trends, attention, periodAttention, todayKpi, unmarked].find((q) => q.error instanceof ApiError)?.error as ApiError | undefined;
+  const nowError = [attention, todayKpi, unmarked].some((q) => q.error instanceof ApiError);
 
   const presets: PresetItem[] = PRESETS.map((p) => {
     const r = presetRange(p.key);
     return { key: p.key, label: p.label, meta: p.key === "today" ? cap(humanRange(r.dateFrom, r.dateTo)) : humanRange(r.dateFrom, r.dateTo) };
   });
-  // Стан філії для крапки в бічній панелі: невідмічені — з рядка за період, падіння відвідуваності — з «на зараз».
-  const dropTenants = new Set((attention.data?.items ?? []).filter((it) => it.anomaly_type === "ATTENDANCE_DROP").map((it) => it.tenant_id));
+  // Стан філії в бічній панелі — з одного вікна «на зараз» (attention за останні 30 днів, усі філії);
+  // поки не завантажено — нейтральний стан, а не «усе гаразд».
+  const nowItems = attention.data?.items;
   const sidebarBranches: SidebarBranch[] = activeBranches.map((b) => {
     const row = kpiAll.data?.branch_rows.find((r) => r.tenant_id === b.tenant_id);
-    const unmarkedN = row?.lessons_unmarked_overdue ?? 0;
-    const tone = dropTenants.has(b.tenant_id) ? "risk" : unmarkedN > 0 ? "warn" : "ok";
-    const status = tone === "risk" ? "відвідуваність впала" : tone === "warn" ? `${formatNumber(unmarkedN)} не відмічено` : "усе гаразд";
+    const mine = (nowItems ?? []).filter((it) => it.tenant_id === b.tenant_id);
+    const unmarkedN = mine.filter((it) => it.anomaly_type === UNMARKED_LESSON).length;
+    const drop = mine.some((it) => it.anomaly_type === "ATTENDANCE_DROP");
+    const otherN = mine.length - unmarkedN - (drop ? 1 : 0);
+    const tone: BranchTone = !nowItems ? "none" : drop ? "risk" : unmarkedN > 0 || otherN > 0 ? "warn" : "ok";
+    const status = !nowItems ? (attention.isLoading ? "" : "стан не завантажено")
+      : drop ? "відвідуваність впала"
+      : unmarkedN > 0 ? `${formatNumber(unmarkedN)} не відмічено`
+      : otherN > 0 ? `${formatNumber(otherN)} ${pluralUk(otherN, "сигнал", "сигнали", "сигналів")}`
+      : "усе гаразд";
     return { id: b.tenant_id, name: b.tenant_name, students: row ? row.students_total : null, tone, status };
   });
 
@@ -389,7 +399,11 @@ export function MainBranchPage() {
         days={NOW_DAYS}
         periodLabel={periodLabel}
         loading={todayKpi.isLoading || unmarked.isLoading || attention.isLoading}
+        error={nowError}
+        periodLoading={periodAttention.isLoading}
+        periodError={periodAttention.error instanceof ApiError}
         onOpen={setPanel}
+        onRetry={onRefresh}
       />
 
       {/* ── Г. Філії ── */}
@@ -400,7 +414,7 @@ export function MainBranchPage() {
         </div>
         <BranchCompare
           rows={k?.branch_rows ?? []}
-          attentionByTenant={attentionByTenant}
+          attentionItems={periodAttention.data?.items ?? []}
           loading={kpi.isLoading}
           canEnter={canEnter}
           busyId={busyId}
@@ -451,7 +465,9 @@ export function MainBranchPage() {
         <MetricPanel
           panel={panel}
           kpi={k}
+          nowKpi={nowKpi.data}
           todayKpi={todayKpi.data}
+          rowsLoading={panel.kind === "today" ? todayKpi.isLoading : panel.scope === "now" ? nowKpi.isLoading : kpi.isLoading}
           attention={panel.scope === "now" ? attention.data : periodAttention.data}
           filters={filters}
           nowFilters={nowFilters}

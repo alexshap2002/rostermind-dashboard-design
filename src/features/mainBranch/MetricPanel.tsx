@@ -27,7 +27,11 @@ const TITLES: Record<PanelKind, string> = {
 interface Props {
   panel: Panel;
   kpi: MainBranchKpi | undefined;
+  /** Той самий KPI за вікно «На зараз» (останні N днів, усі філії) — для сигналів із «На зараз». */
+  nowKpi: MainBranchKpi | undefined;
   todayKpi: MainBranchKpi | undefined;
+  /** Рядки ще завантажуються — скелетон, а не порожня таблиця. */
+  rowsLoading: boolean;
   attention: AttentionReport | undefined;
   filters: MainBranchFilters;
   nowFilters: MainBranchFilters;
@@ -50,7 +54,8 @@ export function MetricPanel(props: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onPanel]);
 
-  const rowsAll = (panel.kind === "today" ? props.todayKpi : props.kpi)?.branch_rows ?? [];
+  // Рядки — з того вікна, яке підписано зверху: «сьогодні», «на зараз» або обраний період.
+  const rowsAll = (panel.kind === "today" ? props.todayKpi : panel.scope === "now" ? props.nowKpi : props.kpi)?.branch_rows ?? [];
   const branchName = panel.branch !== null ? rowsAll.find((r) => r.tenant_id === panel.branch)?.tenant_name : undefined;
   const scopeLabel = panel.kind === "today" ? "сьогодні" : panel.scope === "now" ? props.nowLabel : props.periodLabel;
 
@@ -71,7 +76,9 @@ export function MetricPanel(props: Props) {
           <button ref={closeRef} type="button" className="nd-icon-btn" aria-label="Закрити" onClick={() => onPanel(null)}><IconClose /></button>
         </header>
         <div className="nd-drawer-body">
-          <PanelBody {...props} rowsAll={rowsAll} branchName={branchName} />
+          {props.rowsLoading && rowsAll.length === 0
+            ? <span className="nd-skel" style={{ width: "100%", height: 120 }} />
+            : <PanelBody {...props} rowsAll={rowsAll} branchName={branchName} />}
         </div>
       </aside>
     </div>
